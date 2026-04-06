@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import { api } from "@convex/_generated/api";
 
 function InboxBadge() {
   const count = useQuery(api.grants.getInboxCount);
