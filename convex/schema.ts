@@ -71,6 +71,7 @@ export default defineSchema({
     requiresInvitation: v.optional(v.boolean()),
     monitorForReopening: v.optional(v.boolean()),
     lastScrapedAt: v.optional(v.number()),
+    suspended: v.optional(v.boolean()),
   })
     .index("by_token", ["tokenIdentifier"])
     .index("by_name", ["name"])
@@ -127,6 +128,15 @@ export default defineSchema({
     contactEmail: v.optional(v.string()),
     focusAreas: v.array(v.string()),
     tokenIdentifier: v.string(),
+    // Extended org profile
+    primaryPrograms: v.optional(v.string()),
+    geographicScope: v.optional(v.string()),
+    annualBudget: v.optional(v.string()),
+    foundedYear: v.optional(v.number()),
+    // Notification preferences
+    notifyNewGrants: v.optional(v.boolean()),
+    notifyEmail: v.optional(v.string()),
+    notifyMinScore: v.optional(v.number()),
   }).index("by_token", ["tokenIdentifier"]),
 
   scraper_log: defineTable({

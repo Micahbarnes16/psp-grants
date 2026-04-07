@@ -2,6 +2,7 @@
 
 import { internalAction, action } from "../_generated/server";
 import { v } from "convex/values";
+import { requireAllowedUser } from "../lib/auth";
 
 // Import the raw scrape functions — all are "use node", same runtime.
 // Calling them directly avoids cross-action overhead per Convex guidelines.
@@ -82,4 +83,26 @@ export const runAllScrapers = internalAction({
 export const runAllScrapersManual = action({
   args: {},
   handler: (ctx) => runAll(ctx),
+});
+
+/** Run a single scraper by its source key — called from the Settings UI. */
+export const runScraperBySource = action({
+  args: { source: v.string() },
+  handler: async (ctx, { source }) => {
+    await requireAllowedUser(ctx);
+    const scraperMap: Record<string, ScraperFn> = {
+      "chatlos.org": scrapeChatlos,
+      "lillyendowment.org": scrapeLilly,
+      "crowelltrust.org": scrapeCrowell,
+      "foundationforevangelism.org": scrapeEvangelism,
+      "ncfgiving.com": scrapeNcf,
+      "stewardshipfdn.org": scrapeStewardship,
+      "givingcompass.org": scrapeGivingCompass,
+      "grantwatch.com": scrapeGrantWatch,
+      "zeffy.com": scrapeZeffy,
+    };
+    const scraper = scraperMap[source];
+    if (!scraper) throw new Error(`No scraper registered for: ${source}`);
+    return await scraper(ctx);
+  },
 });
