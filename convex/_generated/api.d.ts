@@ -9,8 +9,10 @@
  */
 
 import type * as crons from "../crons.js";
+import type * as funders from "../funders.js";
 import type * as grants from "../grants.js";
 import type * as lib_auth from "../lib/auth.js";
+import type * as psp from "../psp.js";
 import type * as scrapers_chatlos from "../scrapers/chatlos.js";
 import type * as scrapers_crowell from "../scrapers/crowell.js";
 import type * as scrapers_evangelism from "../scrapers/evangelism.js";
@@ -32,8 +34,10 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   crons: typeof crons;
+  funders: typeof funders;
   grants: typeof grants;
   "lib/auth": typeof lib_auth;
+  psp: typeof psp;
   "scrapers/chatlos": typeof scrapers_chatlos;
   "scrapers/crowell": typeof scrapers_crowell;
   "scrapers/evangelism": typeof scrapers_evangelism;
