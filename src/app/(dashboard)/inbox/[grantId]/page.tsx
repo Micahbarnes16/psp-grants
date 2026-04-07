@@ -3,7 +3,7 @@
 import { use, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { useQuery, useMutation } from "convex/react";
+import { useQuery, useMutation, useConvexAuth } from "convex/react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import { DismissModal } from "@/components/dismiss-modal";
@@ -64,10 +64,12 @@ export default function GrantDetailPage({
 }) {
   const { grantId } = use(params);
   const router = useRouter();
+  const { isAuthenticated } = useConvexAuth();
 
-  const result = useQuery(api.grants.getById, {
-    grantId: grantId as Id<"grants">,
-  });
+  const result = useQuery(
+    api.grants.getById,
+    isAuthenticated ? { grantId: grantId as Id<"grants"> } : "skip"
+  );
 
   const approveMutation = useMutation(api.grants.approve);
   const dismissMutation = useMutation(api.grants.dismiss);

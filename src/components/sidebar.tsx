@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useQuery } from "convex/react";
+import { useQuery, useConvexAuth } from "convex/react";
 import { api } from "@convex/_generated/api";
 
 function InboxBadge() {
-  const count = useQuery(api.grants.getInboxCount);
+  const { isAuthenticated } = useConvexAuth();
+  const count = useQuery(api.grants.getInboxCount, isAuthenticated ? {} : "skip");
   if (!count) return null;
   return (
     <span className="ml-auto rounded-full bg-gray-900 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white">

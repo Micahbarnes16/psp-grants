@@ -1,11 +1,12 @@
 "use client";
 
-import { useQuery } from "convex/react";
+import { useQuery, useConvexAuth } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { GrantCard } from "@/components/grant-card";
 
 export default function InboxPage() {
-  const grants = useQuery(api.grants.listInbox);
+  const { isAuthenticated } = useConvexAuth();
+  const grants = useQuery(api.grants.listInbox, isAuthenticated ? {} : "skip");
 
   return (
     <div className="mx-auto max-w-2xl">
