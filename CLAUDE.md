@@ -2,6 +2,8 @@
 
 Before committing ANY changes, always run `npm run build` first and fix all errors. Do not commit or push until the build passes cleanly. This is a Vercel-deployed project — if the build fails locally, it will fail in production.
 
+After adding, renaming, or deleting ANY Convex function files (*.ts in convex/), always run `npx convex dev --once` to regenerate convex/_generated/*, then stage and commit those generated files alongside your changes. Vercel builds will fail if generated files are out of sync. Always run `npm run build` before pushing to verify the build passes.
+
 <!-- convex-ai-start -->
 This project uses [Convex](https://convex.dev) as its backend.
 
