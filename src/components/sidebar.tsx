@@ -10,7 +10,7 @@ function InboxBadge() {
   const count = useQuery(api.grants.getInboxCount, isAuthenticated ? {} : "skip");
   if (!count) return null;
   return (
-    <span className="ml-auto rounded-full bg-gray-900 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white">
+    <span className="ml-auto rounded-full bg-gray-900 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white dark:bg-white dark:text-gray-900">
       {count > 99 ? "99+" : count}
     </span>
   );
@@ -89,14 +89,14 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const navContent = (
     <>
       {/* Header */}
-      <div className="flex h-14 shrink-0 items-center justify-between border-b border-gray-200 px-4">
-        <span className="text-sm font-semibold tracking-tight text-gray-900">
+      <div className="flex h-14 shrink-0 items-center justify-between border-b border-gray-200 px-4 dark:border-gray-700">
+        <span className="text-sm font-semibold tracking-tight text-gray-900 dark:text-gray-100">
           PSP Grants
         </span>
         {/* Close button — mobile only */}
         <button
           onClick={onClose}
-          className="rounded-md p-1 text-gray-400 hover:text-gray-600 md:hidden"
+          className="rounded-md p-1 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 md:hidden"
           aria-label="Close navigation"
         >
           <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -119,11 +119,11 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                   onClick={onClose}
                   className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
                     isActive
-                      ? "bg-gray-100 text-gray-900"
-                      : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                      ? "bg-gray-100 text-gray-900 dark:bg-gray-700 dark:text-gray-100"
+                      : "text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-100"
                   }`}
                 >
-                  <span className={isActive ? "text-gray-700" : "text-gray-400"}>
+                  <span className={isActive ? "text-gray-700 dark:text-gray-300" : "text-gray-400 dark:text-gray-500"}>
                     {item.icon}
                   </span>
                   {item.label}
@@ -144,11 +144,11 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                   onClick={onClose}
                   className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
                     isActive
-                      ? "bg-gray-100 text-gray-900"
-                      : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                      ? "bg-gray-100 text-gray-900 dark:bg-gray-700 dark:text-gray-100"
+                      : "text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-100"
                   }`}
                 >
-                  <span className={isActive ? "text-gray-700" : "text-gray-400"}>
+                  <span className={isActive ? "text-gray-700 dark:text-gray-300" : "text-gray-400 dark:text-gray-500"}>
                     {item.icon}
                   </span>
                   {item.label}
@@ -175,12 +175,9 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       {/* Sidebar panel */}
       <aside
         className={[
-          // Base: fixed overlay on mobile, relative in flow on desktop
-          "fixed inset-y-0 left-0 z-40 flex w-64 flex-col bg-white",
+          "fixed inset-y-0 left-0 z-40 flex w-64 flex-col bg-white dark:bg-gray-900",
           "transition-transform duration-200 ease-in-out",
-          // Desktop: participates in flex layout, always visible
-          "md:relative md:z-auto md:w-56 md:translate-x-0 md:border-r md:border-gray-200",
-          // Mobile: slide in/out
+          "md:relative md:z-auto md:w-56 md:translate-x-0 md:border-r md:border-gray-200 md:dark:border-gray-700",
           isOpen ? "translate-x-0 shadow-xl" : "-translate-x-full",
         ].join(" ")}
       >

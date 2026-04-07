@@ -43,14 +43,14 @@ function RenewalCard({ grant }: { grant: RenewalGrant }) {
 
   const urgencyClass =
     daysUntil === null
-      ? "text-gray-500"
+      ? "text-gray-500 dark:text-gray-400"
       : daysUntil <= 0
-        ? "font-semibold text-red-600"
+        ? "font-semibold text-red-600 dark:text-red-400"
         : daysUntil <= 30
-          ? "font-semibold text-red-600"
+          ? "font-semibold text-red-600 dark:text-red-400"
           : daysUntil <= 60
-            ? "font-semibold text-amber-600"
-            : "text-gray-700";
+            ? "font-semibold text-amber-600 dark:text-amber-400"
+            : "text-gray-700 dark:text-gray-300";
 
   async function handleStartRenewal() {
     setPending(true);
@@ -63,25 +63,25 @@ function RenewalCard({ grant }: { grant: RenewalGrant }) {
   }
 
   return (
-    <article className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-5">
+    <article className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800 sm:p-5">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+        <span className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
           {grant.funderName}
         </span>
       </div>
 
-      <h3 className="mt-2 text-base font-semibold text-gray-900 leading-snug">
+      <h3 className="mt-2 text-base font-semibold text-gray-900 leading-snug dark:text-gray-100">
         {grant.title}
       </h3>
 
       <div className="mt-2 flex flex-wrap items-center gap-x-5 gap-y-1">
         {grant.awardAmount !== undefined && (
-          <span className="text-sm text-gray-600">
+          <span className="text-sm text-gray-600 dark:text-gray-400">
             {formatCurrency(grant.awardAmount)} awarded
           </span>
         )}
         {grant.grantPeriodEnd !== undefined && (
-          <span className="text-sm text-gray-500">
+          <span className="text-sm text-gray-500 dark:text-gray-400">
             Period ends {formatDate(grant.grantPeriodEnd)}
           </span>
         )}
@@ -101,14 +101,14 @@ function RenewalCard({ grant }: { grant: RenewalGrant }) {
 
       <div className="mt-4">
         {done ? (
-          <p className="text-sm font-medium text-green-700">
+          <p className="text-sm font-medium text-green-700 dark:text-green-400">
             Renewal draft created — it&apos;s saved in your applications.
           </p>
         ) : (
           <button
             onClick={handleStartRenewal}
             disabled={pending}
-            className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700 disabled:opacity-60"
+            className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700 disabled:opacity-60 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-200"
           >
             {pending ? "Creating…" : "Start Renewal"}
           </button>
@@ -128,8 +128,8 @@ export default function RenewalsPage() {
   return (
     <div className="mx-auto max-w-2xl">
       <div className="mb-6">
-        <h2 className="text-xl font-semibold text-gray-900">Renewals</h2>
-        <p className="mt-1 text-sm text-gray-500">
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Renewals</h2>
+        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
           Active grants with upcoming reapplication deadlines, sorted by urgency.
         </p>
       </div>
@@ -137,16 +137,16 @@ export default function RenewalsPage() {
       {grants === undefined && (
         <div className="space-y-3">
           {[1, 2].map((n) => (
-            <div key={n} className="h-32 animate-pulse rounded-xl bg-gray-100" />
+            <div key={n} className="h-32 animate-pulse rounded-xl bg-gray-100 dark:bg-gray-800" />
           ))}
         </div>
       )}
 
       {grants !== undefined && grants.length === 0 && (
-        <div className="rounded-xl border border-dashed border-gray-300 bg-white px-6 py-16 text-center">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-gray-100">
+        <div className="rounded-xl border border-dashed border-gray-300 bg-white px-6 py-16 text-center dark:border-gray-600 dark:bg-gray-800">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700">
             <svg
-              className="h-6 w-6 text-gray-400"
+              className="h-6 w-6 text-gray-400 dark:text-gray-500"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -159,8 +159,8 @@ export default function RenewalsPage() {
               />
             </svg>
           </div>
-          <p className="text-sm font-medium text-gray-700">No renewals due</p>
-          <p className="mt-1 text-sm text-gray-400">
+          <p className="text-sm font-medium text-gray-700 dark:text-gray-300">No renewals due</p>
+          <p className="mt-1 text-sm text-gray-400 dark:text-gray-500">
             When you have active grants approaching renewal, they will appear here.
           </p>
         </div>

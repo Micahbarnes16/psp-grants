@@ -54,12 +54,12 @@ function Badge({
   color: "gray" | "blue" | "green" | "red" | "amber" | "violet";
 }) {
   const colors = {
-    gray: "bg-gray-100 text-gray-600",
-    blue: "bg-blue-50 text-blue-700",
-    green: "bg-green-50 text-green-700",
-    red: "bg-red-50 text-red-700",
-    amber: "bg-amber-50 text-amber-700",
-    violet: "bg-violet-50 text-violet-700",
+    gray: "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300",
+    blue: "bg-blue-50 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
+    green: "bg-green-50 text-green-700 dark:bg-green-900/40 dark:text-green-300",
+    red: "bg-red-50 text-red-700 dark:bg-red-900/40 dark:text-red-300",
+    amber: "bg-amber-50 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
+    violet: "bg-violet-50 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300",
   };
   return (
     <span
@@ -144,10 +144,10 @@ export function GrantCard({ grant }: GrantCardProps) {
 
   return (
     <>
-      <article className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md sm:p-5">
+      <article className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md dark:border-gray-700 dark:bg-gray-800 sm:p-5">
         {/* Funder + badges */}
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+          <span className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
             {grant.funderName}
           </span>
           <StatusBadge status={grant.status} />
@@ -158,7 +158,7 @@ export function GrantCard({ grant }: GrantCardProps) {
         </div>
 
         {/* Title */}
-        <h3 className="mt-2 line-clamp-2 text-base font-semibold text-gray-900 leading-snug">
+        <h3 className="mt-2 line-clamp-2 text-base font-semibold text-gray-900 leading-snug dark:text-gray-100">
           {grant.title}
         </h3>
 
@@ -168,10 +168,10 @@ export function GrantCard({ grant }: GrantCardProps) {
             <span
               className={`flex items-center gap-1 text-sm ${
                 isPast
-                  ? "text-gray-400 line-through"
+                  ? "text-gray-400 line-through dark:text-gray-600"
                   : isUrgent
-                    ? "font-medium text-red-600"
-                    : "text-gray-600"
+                    ? "font-medium text-red-600 dark:text-red-400"
+                    : "text-gray-600 dark:text-gray-400"
               }`}
             >
               {isUrgent && (
@@ -190,11 +190,11 @@ export function GrantCard({ grant }: GrantCardProps) {
               {formatDate(grant.deadline)}
             </span>
           ) : (
-            <span className="text-sm text-gray-400">No deadline listed</span>
+            <span className="text-sm text-gray-400 dark:text-gray-500">No deadline listed</span>
           )}
 
           {amountStr && (
-            <span className="text-sm font-medium text-gray-700">
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
               {amountStr}
             </span>
           )}
@@ -206,7 +206,7 @@ export function GrantCard({ grant }: GrantCardProps) {
             href={grant.sourceUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="mt-1.5 inline-flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600"
+            className="mt-1.5 inline-flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
           >
             {host}
             <svg className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
@@ -224,13 +224,13 @@ export function GrantCard({ grant }: GrantCardProps) {
           <button
             onClick={handleReview}
             disabled={reviewPending}
-            className="flex-1 rounded-lg bg-gray-900 px-3 py-2 text-sm font-medium text-white hover:bg-gray-700 disabled:opacity-60"
+            className="flex-1 rounded-lg bg-gray-900 px-3 py-2 text-sm font-medium text-white hover:bg-gray-700 disabled:opacity-60 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-200"
           >
             {reviewPending ? "Opening…" : "Review"}
           </button>
           <button
             onClick={() => setShowDismiss(true)}
-            className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50"
+            className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-700"
           >
             Dismiss
           </button>

@@ -42,14 +42,14 @@ export function RecordDecisionModal({
         onClick={onCancel}
         aria-hidden="true"
       />
-      <div className="relative w-full max-w-md rounded-t-2xl bg-white px-6 py-6 shadow-xl sm:rounded-xl">
+      <div className="relative w-full max-w-md rounded-t-2xl bg-white px-6 py-6 shadow-xl dark:bg-gray-800 sm:rounded-xl">
         <div className="mb-1 flex items-start justify-between">
-          <h2 className="text-base font-semibold text-gray-900">
+          <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">
             Record decision
           </h2>
           <button
             onClick={onCancel}
-            className="ml-4 text-gray-400 hover:text-gray-600"
+            className="ml-4 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
           >
             <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
               <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" />
@@ -57,10 +57,10 @@ export function RecordDecisionModal({
           </button>
         </div>
 
-        <p className="mb-4 text-sm text-gray-500 line-clamp-2">{grantTitle}</p>
+        <p className="mb-4 text-sm text-gray-500 line-clamp-2 dark:text-gray-400">{grantTitle}</p>
 
         {/* Decision toggle */}
-        <div className="mb-4 flex rounded-lg border border-gray-200 p-1">
+        <div className="mb-4 flex rounded-lg border border-gray-200 p-1 dark:border-gray-600">
           {(["accepted", "rejected"] as const).map((d) => (
             <button
               key={d}
@@ -70,7 +70,7 @@ export function RecordDecisionModal({
                   ? d === "accepted"
                     ? "bg-green-600 text-white"
                     : "bg-red-600 text-white"
-                  : "text-gray-500 hover:text-gray-700"
+                  : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
               }`}
             >
               {d === "accepted" ? "Awarded" : "Rejected"}
@@ -83,13 +83,13 @@ export function RecordDecisionModal({
           <div className="mb-3">
             <label
               htmlFor="award-amount"
-              className="block text-sm font-medium text-gray-700"
+              className="block text-sm font-medium text-gray-700 dark:text-gray-300"
             >
               Award amount{" "}
-              <span className="font-normal text-gray-400">(optional)</span>
+              <span className="font-normal text-gray-400 dark:text-gray-500">(optional)</span>
             </label>
             <div className="relative mt-1.5">
-              <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-gray-400">
+              <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-gray-400 dark:text-gray-500">
                 $
               </span>
               <input
@@ -99,7 +99,7 @@ export function RecordDecisionModal({
                 placeholder="0"
                 value={amountStr}
                 onChange={(e) => setAmountStr(e.target.value)}
-                className="w-full rounded-lg border border-gray-200 py-2 pl-7 pr-3 text-sm text-gray-900 focus:border-gray-400 focus:outline-none"
+                className="w-full rounded-lg border border-gray-200 bg-white py-2 pl-7 pr-3 text-sm text-gray-900 focus:border-gray-400 focus:outline-none dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
               />
             </div>
           </div>
@@ -109,10 +109,10 @@ export function RecordDecisionModal({
         <div className="mb-5">
           <label
             htmlFor="decision-notes"
-            className="block text-sm font-medium text-gray-700"
+            className="block text-sm font-medium text-gray-700 dark:text-gray-300"
           >
             Notes{" "}
-            <span className="font-normal text-gray-400">(optional)</span>
+            <span className="font-normal text-gray-400 dark:text-gray-500">(optional)</span>
           </label>
           <textarea
             id="decision-notes"
@@ -120,7 +120,7 @@ export function RecordDecisionModal({
             placeholder="Any context about this decision…"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            className="mt-1.5 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 focus:border-gray-400 focus:outline-none resize-none"
+            className="mt-1.5 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-gray-400 focus:outline-none resize-none dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
           />
         </div>
 
@@ -128,7 +128,7 @@ export function RecordDecisionModal({
           <button
             onClick={onCancel}
             disabled={isPending}
-            className="w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 sm:w-auto"
+            className="w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700 sm:w-auto"
           >
             Cancel
           </button>

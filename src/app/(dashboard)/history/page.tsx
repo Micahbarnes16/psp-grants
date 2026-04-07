@@ -43,18 +43,18 @@ type HistoryGrant = {
 function StatusBadge({ status }: { status: string }) {
   if (status === "accepted")
     return (
-      <span className="inline-flex items-center rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700">
+      <span className="inline-flex items-center rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900/40 dark:text-green-300">
         Awarded
       </span>
     );
   if (status === "rejected")
     return (
-      <span className="inline-flex items-center rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700">
+      <span className="inline-flex items-center rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700 dark:bg-red-900/40 dark:text-red-300">
         Rejected
       </span>
     );
   return (
-    <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
+    <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 dark:bg-gray-700 dark:text-gray-300">
       Dismissed
     </span>
   );
@@ -79,23 +79,23 @@ function HistoryRow({ grant }: { grant: HistoryGrant }) {
     <div className="flex items-start justify-between gap-4 py-4">
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+          <span className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
             {grant.funderName}
           </span>
           <StatusBadge status={grant.status} />
         </div>
-        <p className="mt-1 text-sm font-medium text-gray-900 leading-snug">
+        <p className="mt-1 text-sm font-medium text-gray-900 leading-snug dark:text-gray-100">
           {grant.title}
         </p>
         <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-0.5">
-          <span className="text-xs text-gray-400">{formatDate(date)}</span>
+          <span className="text-xs text-gray-400 dark:text-gray-500">{formatDate(date)}</span>
           {grant.status === "accepted" && grant.awardAmount !== undefined && (
-            <span className="text-xs font-medium text-green-700">
+            <span className="text-xs font-medium text-green-700 dark:text-green-400">
               {formatCurrency(grant.awardAmount)} awarded
             </span>
           )}
           {grant.status === "dismissed" && grant.dismissReason && (
-            <span className="text-xs text-gray-400">
+            <span className="text-xs text-gray-400 dark:text-gray-500">
               {DISMISS_REASON_LABELS[grant.dismissReason] ?? grant.dismissReason}
             </span>
           )}
@@ -106,7 +106,7 @@ function HistoryRow({ grant }: { grant: HistoryGrant }) {
         <button
           onClick={handleReconsider}
           disabled={pending}
-          className="shrink-0 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-60"
+          className="shrink-0 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-60 dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-700"
         >
           {pending ? "Moving…" : "Reconsider"}
         </button>
@@ -136,8 +136,8 @@ export default function HistoryPage() {
   return (
     <div className="mx-auto max-w-2xl">
       <div className="mb-6">
-        <h2 className="text-xl font-semibold text-gray-900">History</h2>
-        <p className="mt-1 text-sm text-gray-500">
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">History</h2>
+        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
           Past grant decisions — awarded, rejected, and dismissed.
         </p>
       </div>
@@ -145,16 +145,16 @@ export default function HistoryPage() {
       {grants === undefined && (
         <div className="space-y-3">
           {[1, 2, 3].map((n) => (
-            <div key={n} className="h-16 animate-pulse rounded-xl bg-gray-100" />
+            <div key={n} className="h-16 animate-pulse rounded-xl bg-gray-100 dark:bg-gray-800" />
           ))}
         </div>
       )}
 
       {grants !== undefined && grants.length === 0 && (
-        <div className="rounded-xl border border-dashed border-gray-300 bg-white px-6 py-16 text-center">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-gray-100">
+        <div className="rounded-xl border border-dashed border-gray-300 bg-white px-6 py-16 text-center dark:border-gray-600 dark:bg-gray-800">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700">
             <svg
-              className="h-6 w-6 text-gray-400"
+              className="h-6 w-6 text-gray-400 dark:text-gray-500"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -167,8 +167,8 @@ export default function HistoryPage() {
               />
             </svg>
           </div>
-          <p className="text-sm font-medium text-gray-700">No grant history yet</p>
-          <p className="mt-1 text-sm text-gray-400">
+          <p className="text-sm font-medium text-gray-700 dark:text-gray-300">No grant history yet</p>
+          <p className="mt-1 text-sm text-gray-400 dark:text-gray-500">
             Past decisions will be recorded here.
           </p>
         </div>
@@ -178,12 +178,12 @@ export default function HistoryPage() {
         <div className="space-y-6">
           {years.map((year) => (
             <section key={year}>
-              <h3 className="mb-2 text-sm font-semibold text-gray-500">{year}</h3>
-              <div className="rounded-xl border border-gray-200 bg-white px-4 sm:px-5">
+              <h3 className="mb-2 text-sm font-semibold text-gray-500 dark:text-gray-400">{year}</h3>
+              <div className="rounded-xl border border-gray-200 bg-white px-4 dark:border-gray-700 dark:bg-gray-800 sm:px-5">
                 {byYear.get(year)!.map((grant, i, arr) => (
                   <div
                     key={grant._id}
-                    className={i < arr.length - 1 ? "border-b border-gray-100" : ""}
+                    className={i < arr.length - 1 ? "border-b border-gray-100 dark:border-gray-700" : ""}
                   >
                     <HistoryRow grant={grant} />
                   </div>

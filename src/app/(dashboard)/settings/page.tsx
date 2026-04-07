@@ -19,10 +19,10 @@ function SectionCard({
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-xl border border-gray-200 bg-white">
-      <div className="border-b border-gray-100 px-5 py-4">
-        <h3 className="text-sm font-semibold text-gray-900">{title}</h3>
-        <p className="mt-0.5 text-sm text-gray-500">{description}</p>
+    <div className="rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+      <div className="border-b border-gray-100 px-5 py-4 dark:border-gray-700">
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">{title}</h3>
+        <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">{description}</p>
       </div>
       <div className="px-5 py-5">{children}</div>
     </div>
@@ -40,18 +40,18 @@ function Field({
 }) {
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-700">{label}</label>
-      {hint && <p className="mt-0.5 text-xs text-gray-400">{hint}</p>}
+      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">{label}</label>
+      {hint && <p className="mt-0.5 text-xs text-gray-400 dark:text-gray-500">{hint}</p>}
       <div className="mt-1.5">{children}</div>
     </div>
   );
 }
 
 const inputCls =
-  "w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-gray-400 focus:outline-none";
+  "w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-gray-400 focus:outline-none dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 dark:placeholder:text-gray-500";
 
 const selectCls =
-  "w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-gray-400 focus:outline-none";
+  "w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-gray-400 focus:outline-none dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100";
 
 function SaveRow({
   onSave,
@@ -69,12 +69,12 @@ function SaveRow({
       <button
         onClick={onSave}
         disabled={pending || disabled}
-        className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700 disabled:opacity-60"
+        className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700 disabled:opacity-60 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-200"
       >
         {pending ? "Saving…" : "Save"}
       </button>
       {saved && (
-        <span className="flex items-center gap-1.5 text-sm text-green-700">
+        <span className="flex items-center gap-1.5 text-sm text-green-700 dark:text-green-400">
           <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
             <path
               fillRule="evenodd"
@@ -114,18 +114,18 @@ function TagsInput({
   }
 
   return (
-    <div className="rounded-lg border border-gray-200 px-3 py-2">
+    <div className="rounded-lg border border-gray-200 px-3 py-2 dark:border-gray-600 dark:bg-gray-700">
       <div className="flex flex-wrap gap-1.5 mb-2">
         {tags.map((tag) => (
           <span
             key={tag}
-            className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-700"
+            className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-700 dark:bg-gray-600 dark:text-gray-200"
           >
             {tag}
             <button
               type="button"
               onClick={() => onChange(tags.filter((t) => t !== tag))}
-              className="text-gray-400 hover:text-gray-600"
+              className="text-gray-400 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-200"
             >
               <svg className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
                 <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" />
@@ -148,7 +148,7 @@ function TagsInput({
         }}
         onBlur={commit}
         placeholder={tags.length === 0 ? placeholder : "Add another…"}
-        className="w-full text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none"
+        className="w-full text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none dark:bg-gray-700 dark:text-gray-100 dark:placeholder:text-gray-500"
       />
     </div>
   );
@@ -212,7 +212,6 @@ function ProfileSection({
   const [pending, setPending] = useState(false);
   const [saved, setSaved] = useState(false);
 
-  // Populate form when profile loads
   useEffect(() => {
     if (!profileDoc) return;
     setForm({
@@ -266,7 +265,6 @@ function ProfileSection({
     }
   }
 
-  // Loading skeleton
   if (profileDoc === undefined) {
     return (
       <SectionCard
@@ -275,7 +273,7 @@ function ProfileSection({
       >
         <div className="space-y-4">
           {[1, 2, 3, 4].map((n) => (
-            <div key={n} className="h-9 animate-pulse rounded-lg bg-gray-100" />
+            <div key={n} className="h-9 animate-pulse rounded-lg bg-gray-100 dark:bg-gray-700" />
           ))}
         </div>
       </SectionCard>
@@ -470,10 +468,10 @@ function NotificationsSection({
         {/* Email notifications toggle */}
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="text-sm font-medium text-gray-900">
+            <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
               Email notifications
             </p>
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-gray-500 dark:text-gray-400">
               Get notified when new matching grants are discovered.
             </p>
           </div>
@@ -486,11 +484,11 @@ function NotificationsSection({
               setSaved(false);
             }}
             className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${
-              notifyEnabled ? "bg-gray-900" : "bg-gray-200"
+              notifyEnabled ? "bg-gray-900 dark:bg-white" : "bg-gray-200 dark:bg-gray-600"
             }`}
           >
             <span
-              className={`inline-block h-5 w-5 rounded-full bg-white shadow transition-transform ${
+              className={`inline-block h-5 w-5 rounded-full bg-white shadow transition-transform dark:bg-gray-900 ${
                 notifyEnabled ? "translate-x-5" : "translate-x-0"
               }`}
             />
@@ -525,9 +523,9 @@ function NotificationsSection({
                   setMinScore(parseInt(e.target.value, 10));
                   setSaved(false);
                 }}
-                className="w-full accent-gray-900"
+                className="w-full accent-gray-900 dark:accent-white"
               />
-              <div className="mt-1 flex justify-between text-xs text-gray-400">
+              <div className="mt-1 flex justify-between text-xs text-gray-400 dark:text-gray-500">
                 <span>0 — all grants</span>
                 <span>100 — perfect match only</span>
               </div>
@@ -545,7 +543,6 @@ function NotificationsSection({
 // Section: Scraper Sources
 // ---------------------------------------------------------------------------
 
-// Maps a funder's website domain to the scraper source key
 const DOMAIN_TO_SOURCE: Record<string, string> = {
   "chatlos.org": "chatlos.org",
   "lillyendowment.org": "lillyendowment.org",
@@ -628,13 +625,13 @@ function FunderRow({ funder }: { funder: FunderDoc }) {
     <div className="flex flex-col gap-2 py-4 sm:flex-row sm:items-center sm:justify-between">
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-sm font-medium text-gray-900">{funder.name}</span>
+          <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{funder.name}</span>
           {isSuspended ? (
-            <span className="rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700">
+            <span className="rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700 dark:bg-red-900/40 dark:text-red-300">
               Suspended
             </span>
           ) : (
-            <span className="rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700">
+            <span className="rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900/40 dark:text-green-300">
               Active
             </span>
           )}
@@ -644,12 +641,12 @@ function FunderRow({ funder }: { funder: FunderDoc }) {
             href={funder.website}
             target="_blank"
             rel="noopener noreferrer"
-            className="mt-0.5 block truncate text-xs text-gray-400 hover:text-gray-600"
+            className="mt-0.5 block truncate text-xs text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
           >
             {funder.website}
           </a>
         )}
-        <p className="mt-0.5 text-xs text-gray-400">
+        <p className="mt-0.5 text-xs text-gray-400 dark:text-gray-500">
           {funder.lastScrapedAt
             ? `Last scraped ${formatDate(funder.lastScrapedAt)}`
             : "Never scraped"}
@@ -657,7 +654,7 @@ function FunderRow({ funder }: { funder: FunderDoc }) {
         {runResult && (
           <p
             className={`mt-1 text-xs font-medium ${
-              runResult.startsWith("Error") ? "text-red-600" : "text-green-700"
+              runResult.startsWith("Error") ? "text-red-600 dark:text-red-400" : "text-green-700 dark:text-green-400"
             }`}
           >
             {runResult}
@@ -669,7 +666,7 @@ function FunderRow({ funder }: { funder: FunderDoc }) {
         <button
           onClick={handleToggle}
           disabled={togglePending}
-          className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-60"
+          className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-60 dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-700"
         >
           {togglePending
             ? "…"
@@ -681,7 +678,7 @@ function FunderRow({ funder }: { funder: FunderDoc }) {
           <button
             onClick={handleRunNow}
             disabled={runPending || isSuspended}
-            className="rounded-lg bg-gray-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-700 disabled:opacity-60"
+            className="rounded-lg bg-gray-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-700 disabled:opacity-60 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-200"
           >
             {runPending ? "Running…" : "Run Now"}
           </button>
@@ -706,19 +703,19 @@ function ScraperSourcesSection() {
       {funders === undefined && (
         <div className="space-y-3">
           {[1, 2, 3].map((n) => (
-            <div key={n} className="h-16 animate-pulse rounded-lg bg-gray-100" />
+            <div key={n} className="h-16 animate-pulse rounded-lg bg-gray-100 dark:bg-gray-700" />
           ))}
         </div>
       )}
 
       {funders !== undefined && funders.length === 0 && (
-        <p className="py-4 text-center text-sm text-gray-400">
+        <p className="py-4 text-center text-sm text-gray-400 dark:text-gray-500">
           No funders yet — run the scrapers to populate this list.
         </p>
       )}
 
       {funders !== undefined && funders.length > 0 && (
-        <div className="divide-y divide-gray-100">
+        <div className="divide-y divide-gray-100 dark:divide-gray-700">
           {funders.map((funder) => (
             <FunderRow key={funder._id} funder={funder} />
           ))}
@@ -741,8 +738,8 @@ export default function SettingsPage() {
   return (
     <div className="mx-auto max-w-2xl">
       <div className="mb-6">
-        <h2 className="text-xl font-semibold text-gray-900">Settings</h2>
-        <p className="mt-1 text-sm text-gray-500">
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Settings</h2>
+        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
           Manage your organization profile, notifications, and data sources.
         </p>
       </div>

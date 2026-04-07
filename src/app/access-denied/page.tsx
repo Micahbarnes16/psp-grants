@@ -2,12 +2,12 @@ import { SignOutButton } from "@clerk/nextjs";
 
 export default function AccessDeniedPage() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950">
       <div className="max-w-md w-full mx-auto text-center px-6">
         <div className="mb-6 flex justify-center">
-          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-red-50">
+          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-red-50 dark:bg-red-900/30">
             <svg
-              className="h-7 w-7 text-red-500"
+              className="h-7 w-7 text-red-500 dark:text-red-400"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -22,8 +22,8 @@ export default function AccessDeniedPage() {
           </div>
         </div>
 
-        <h1 className="text-xl font-semibold text-gray-900">Access Denied</h1>
-        <p className="mt-3 text-sm text-gray-500 leading-relaxed">
+        <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Access Denied</h1>
+        <p className="mt-3 text-sm text-gray-500 leading-relaxed dark:text-gray-400">
           Your account does not have permission to access this application.
           This tool is reserved for the Barnes family. If you believe this is
           a mistake, please contact the administrator.
@@ -31,7 +31,7 @@ export default function AccessDeniedPage() {
 
         <div className="mt-8">
           <SignOutButton redirectUrl="/sign-in">
-            <button className="inline-flex items-center gap-2 rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700 transition-colors">
+            <button className="inline-flex items-center gap-2 rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700 transition-colors dark:bg-white dark:text-gray-900 dark:hover:bg-gray-200">
               Sign out
             </button>
           </SignOutButton>

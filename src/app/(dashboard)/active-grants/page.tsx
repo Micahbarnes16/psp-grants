@@ -51,14 +51,14 @@ function ActiveGrantCard({ grant }: { grant: ActiveGrant }) {
     renewalDays !== null && renewalDays <= RENEWAL_WARN_DAYS;
 
   return (
-    <article className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-5">
+    <article className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800 sm:p-5">
       {/* Renewal reminder banner */}
       {showRenewalBanner && (
         <div
           className={`-mx-4 -mt-4 mb-4 rounded-t-xl px-4 py-2.5 sm:-mx-5 sm:-mt-5 sm:px-5 ${
             renewalDays! <= 30
-              ? "bg-red-50 text-red-700"
-              : "bg-amber-50 text-amber-700"
+              ? "bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300"
+              : "bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300"
           }`}
         >
           <p className="text-xs font-semibold">
@@ -72,29 +72,29 @@ function ActiveGrantCard({ grant }: { grant: ActiveGrant }) {
 
       {/* Header row */}
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+        <span className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
           {grant.funderName}
         </span>
-        <span className="inline-flex items-center rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700">
+        <span className="inline-flex items-center rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900/40 dark:text-green-300">
           Active
         </span>
       </div>
 
-      <h3 className="mt-2 text-base font-semibold text-gray-900 leading-snug">
+      <h3 className="mt-2 text-base font-semibold text-gray-900 leading-snug dark:text-gray-100">
         {grant.title}
       </h3>
 
       {/* Metadata row */}
       <div className="mt-2 flex flex-wrap items-center gap-x-5 gap-y-1">
         {grant.awardAmount !== undefined && (
-          <span className="text-sm font-medium text-gray-700">
+          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
             {formatCurrency(grant.awardAmount)} awarded
           </span>
         )}
 
         {grant.grantPeriodStart !== undefined &&
           grant.grantPeriodEnd !== undefined && (
-            <span className="text-sm text-gray-500">
+            <span className="text-sm text-gray-500 dark:text-gray-400">
               {formatDate(grant.grantPeriodStart)} –{" "}
               {formatDate(grant.grantPeriodEnd)}
             </span>
@@ -106,10 +106,10 @@ function ActiveGrantCard({ grant }: { grant: ActiveGrant }) {
         <p
           className={`mt-1 text-sm ${
             daysLeft < 0
-              ? "text-gray-400"
+              ? "text-gray-400 dark:text-gray-600"
               : daysLeft <= 30
-                ? "font-medium text-red-600"
-                : "text-gray-500"
+                ? "font-medium text-red-600 dark:text-red-400"
+                : "text-gray-500 dark:text-gray-400"
           }`}
         >
           {daysLeft < 0
@@ -123,7 +123,7 @@ function ActiveGrantCard({ grant }: { grant: ActiveGrant }) {
       <div className="mt-4">
         <Link
           href={`/inbox/${grant._id}`}
-          className="text-sm font-medium text-gray-900 underline underline-offset-2 hover:text-gray-600"
+          className="text-sm font-medium text-gray-900 underline underline-offset-2 hover:text-gray-600 dark:text-gray-100 dark:hover:text-gray-300"
         >
           View details →
         </Link>
@@ -142,8 +142,8 @@ export default function ActiveGrantsPage() {
   return (
     <div className="mx-auto max-w-2xl">
       <div className="mb-6">
-        <h2 className="text-xl font-semibold text-gray-900">Active Grants</h2>
-        <p className="mt-1 text-sm text-gray-500">
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Active Grants</h2>
+        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
           Grants you&apos;ve been awarded and are currently managing.
         </p>
       </div>
@@ -151,16 +151,16 @@ export default function ActiveGrantsPage() {
       {grants === undefined && (
         <div className="space-y-3">
           {[1, 2].map((n) => (
-            <div key={n} className="h-36 animate-pulse rounded-xl bg-gray-100" />
+            <div key={n} className="h-36 animate-pulse rounded-xl bg-gray-100 dark:bg-gray-800" />
           ))}
         </div>
       )}
 
       {grants !== undefined && grants.length === 0 && (
-        <div className="rounded-xl border border-dashed border-gray-300 bg-white px-6 py-16 text-center">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-gray-100">
+        <div className="rounded-xl border border-dashed border-gray-300 bg-white px-6 py-16 text-center dark:border-gray-600 dark:bg-gray-800">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700">
             <svg
-              className="h-6 w-6 text-gray-400"
+              className="h-6 w-6 text-gray-400 dark:text-gray-500"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -173,8 +173,8 @@ export default function ActiveGrantsPage() {
               />
             </svg>
           </div>
-          <p className="text-sm font-medium text-gray-700">No active grants yet</p>
-          <p className="mt-1 text-sm text-gray-400">
+          <p className="text-sm font-medium text-gray-700 dark:text-gray-300">No active grants yet</p>
+          <p className="mt-1 text-sm text-gray-400 dark:text-gray-500">
             Grants you&apos;ve been awarded will appear here.
           </p>
         </div>

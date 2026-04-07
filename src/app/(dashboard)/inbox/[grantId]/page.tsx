@@ -29,8 +29,8 @@ function formatCurrency(n: number) {
 function DetailRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex flex-col gap-0.5 sm:flex-row sm:gap-6">
-      <dt className="w-36 shrink-0 text-sm font-medium text-gray-500">{label}</dt>
-      <dd className="text-sm text-gray-900">{children}</dd>
+      <dt className="w-36 shrink-0 text-sm font-medium text-gray-500 dark:text-gray-400">{label}</dt>
+      <dd className="text-sm text-gray-900 dark:text-gray-100">{children}</dd>
     </div>
   );
 }
@@ -43,12 +43,12 @@ function Badge({
   color: "gray" | "blue" | "green" | "red" | "amber" | "violet";
 }) {
   const colors = {
-    gray: "bg-gray-100 text-gray-600",
-    blue: "bg-blue-50 text-blue-700",
-    green: "bg-green-50 text-green-700",
-    red: "bg-red-50 text-red-700",
-    amber: "bg-amber-50 text-amber-700",
-    violet: "bg-violet-50 text-violet-700",
+    gray: "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300",
+    blue: "bg-blue-50 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
+    green: "bg-green-50 text-green-700 dark:bg-green-900/40 dark:text-green-300",
+    red: "bg-red-50 text-red-700 dark:bg-red-900/40 dark:text-red-300",
+    amber: "bg-amber-50 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
+    violet: "bg-violet-50 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300",
   };
   return (
     <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${colors[color]}`}>
@@ -82,8 +82,8 @@ export default function GrantDetailPage({
   if (result === undefined) {
     return (
       <div className="mx-auto max-w-2xl space-y-4">
-        <div className="h-8 w-48 animate-pulse rounded-lg bg-gray-100" />
-        <div className="h-64 animate-pulse rounded-xl bg-gray-100" />
+        <div className="h-8 w-48 animate-pulse rounded-lg bg-gray-100 dark:bg-gray-800" />
+        <div className="h-64 animate-pulse rounded-xl bg-gray-100 dark:bg-gray-800" />
       </div>
     );
   }
@@ -92,8 +92,8 @@ export default function GrantDetailPage({
   if (result === null) {
     return (
       <div className="mx-auto max-w-2xl text-center py-16">
-        <p className="text-sm text-gray-500">Grant not found.</p>
-        <Link href="/inbox" className="mt-4 inline-block text-sm font-medium text-gray-900 underline">
+        <p className="text-sm text-gray-500 dark:text-gray-400">Grant not found.</p>
+        <Link href="/inbox" className="mt-4 inline-block text-sm font-medium text-gray-900 underline dark:text-gray-100">
           Back to inbox
         </Link>
       </div>
@@ -134,7 +134,7 @@ export default function GrantDetailPage({
         {/* Back */}
         <Link
           href="/inbox"
-          className="mb-6 inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-900"
+          className="mb-6 inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
         >
           <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
             <path
@@ -148,10 +148,10 @@ export default function GrantDetailPage({
 
         {/* Header */}
         <div className="mb-6">
-          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
             {grant.funderName}
           </p>
-          <h1 className="mt-1 text-xl font-semibold text-gray-900 leading-snug">
+          <h1 className="mt-1 text-xl font-semibold text-gray-900 leading-snug dark:text-gray-100">
             {grant.title}
           </h1>
           <div className="mt-2 flex flex-wrap gap-2">
@@ -168,34 +168,34 @@ export default function GrantDetailPage({
           <button
             onClick={handleApprove}
             disabled={approvePending}
-            className="flex-1 rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-gray-700 disabled:opacity-60"
+            className="flex-1 rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-gray-700 disabled:opacity-60 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-200"
           >
             {approvePending ? "Approving…" : "✓ Approve to Apply"}
           </button>
           <button
             disabled
-            className="flex-1 rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-400 cursor-not-allowed"
+            className="flex-1 rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-400 cursor-not-allowed dark:border-gray-600 dark:text-gray-600"
             title="Coming soon — Claude AI integration"
           >
             Generate Draft Application
           </button>
           <button
             onClick={() => setShowDismiss(true)}
-            className="flex-1 rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-50 sm:flex-none"
+            className="flex-1 rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-700 sm:flex-none"
           >
             Dismiss
           </button>
         </div>
 
         {/* Grant details */}
-        <div className="rounded-xl border border-gray-200 bg-white divide-y divide-gray-100">
+        <div className="rounded-xl border border-gray-200 bg-white divide-y divide-gray-100 dark:border-gray-700 dark:bg-gray-800 dark:divide-gray-700">
           <div className="px-5 py-4">
-            <h2 className="text-sm font-semibold text-gray-900">Grant Details</h2>
+            <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Grant Details</h2>
           </div>
           <dl className="px-5 py-4 space-y-3">
             {grant.deadline !== undefined && (
               <DetailRow label="Deadline">
-                <span className={isUrgent ? "font-medium text-red-600" : ""}>
+                <span className={isUrgent ? "font-medium text-red-600 dark:text-red-400" : ""}>
                   {isUrgent && "⚠ "}
                   {formatDate(grant.deadline)}
                   {isUrgent && " — within 30 days"}
@@ -227,7 +227,7 @@ export default function GrantDetailPage({
                   href={grant.sourceUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-gray-700 underline underline-offset-2 hover:text-gray-900"
+                  className="inline-flex items-center gap-1 text-gray-700 underline underline-offset-2 hover:text-gray-900 dark:text-gray-300 dark:hover:text-gray-100"
                 >
                   {(() => {
                     try { return new URL(grant.sourceUrl).hostname.replace(/^www\./, ""); }
@@ -244,11 +244,11 @@ export default function GrantDetailPage({
 
         {/* Funder notes */}
         {funder?.notes && (
-          <div className="mt-4 rounded-xl border border-gray-200 bg-white px-5 py-4">
-            <h2 className="mb-2 text-sm font-semibold text-gray-900">
+          <div className="mt-4 rounded-xl border border-gray-200 bg-white px-5 py-4 dark:border-gray-700 dark:bg-gray-800">
+            <h2 className="mb-2 text-sm font-semibold text-gray-900 dark:text-gray-100">
               About {funder.name}
             </h2>
-            <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">
+            <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line dark:text-gray-400">
               {funder.notes}
             </p>
             {funder.website && (
@@ -256,7 +256,7 @@ export default function GrantDetailPage({
                 href={funder.website}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="mt-2 inline-flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600"
+                className="mt-2 inline-flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
               >
                 Visit website
                 <svg className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
@@ -269,11 +269,11 @@ export default function GrantDetailPage({
 
         {/* Raw text */}
         {grant.rawText && (
-          <div className="mt-4 rounded-xl border border-gray-200 bg-white px-5 py-4">
-            <h2 className="mb-2 text-sm font-semibold text-gray-900">
+          <div className="mt-4 rounded-xl border border-gray-200 bg-white px-5 py-4 dark:border-gray-700 dark:bg-gray-800">
+            <h2 className="mb-2 text-sm font-semibold text-gray-900 dark:text-gray-100">
               Full Description
             </h2>
-            <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">
+            <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line dark:text-gray-400">
               {grant.rawText}
             </p>
           </div>
@@ -284,13 +284,13 @@ export default function GrantDetailPage({
           <button
             onClick={handleApprove}
             disabled={approvePending}
-            className="flex-1 rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-gray-700 disabled:opacity-60"
+            className="flex-1 rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-gray-700 disabled:opacity-60 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-200"
           >
             {approvePending ? "Approving…" : "✓ Approve to Apply"}
           </button>
           <button
             onClick={() => setShowDismiss(true)}
-            className="flex-1 rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-50"
+            className="flex-1 rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-700"
           >
             Dismiss
           </button>

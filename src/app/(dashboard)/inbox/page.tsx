@@ -11,8 +11,8 @@ export default function InboxPage() {
   return (
     <div className="mx-auto max-w-5xl">
       <div className="mb-6">
-        <h2 className="text-xl font-semibold text-gray-900">Inbox</h2>
-        <p className="mt-1 text-sm text-gray-500">
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Inbox</h2>
+        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
           Newly discovered grants awaiting your review.
         </p>
       </div>
@@ -23,7 +23,7 @@ export default function InboxPage() {
           {[1, 2, 3].map((n) => (
             <div
               key={n}
-              className="h-40 animate-pulse rounded-xl bg-gray-100"
+              className="h-40 animate-pulse rounded-xl bg-gray-100 dark:bg-gray-800"
             />
           ))}
         </div>
@@ -31,10 +31,10 @@ export default function InboxPage() {
 
       {/* Empty state */}
       {grants !== undefined && grants.length === 0 && (
-        <div className="rounded-xl border border-dashed border-gray-300 bg-white px-6 py-16 text-center">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-gray-100">
+        <div className="rounded-xl border border-dashed border-gray-300 bg-white px-6 py-16 text-center dark:border-gray-600 dark:bg-gray-800">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700">
             <svg
-              className="h-6 w-6 text-gray-400"
+              className="h-6 w-6 text-gray-400 dark:text-gray-500"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -47,10 +47,10 @@ export default function InboxPage() {
               />
             </svg>
           </div>
-          <p className="text-sm font-medium text-gray-700">
+          <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
             Inbox is clear
           </p>
-          <p className="mt-1 text-sm text-gray-400">
+          <p className="mt-1 text-sm text-gray-400 dark:text-gray-500">
             No new grants to review. Check back soon — scrapers run weekly.
           </p>
         </div>

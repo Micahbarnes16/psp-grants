@@ -78,38 +78,38 @@ function PipelineCard({ grant }: { grant: PipelineGrant }) {
 
   return (
     <>
-      <article className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-5">
+      <article className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800 sm:p-5">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+          <span className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
             {grant.funderName}
           </span>
           {isApproved && (
-            <span className="inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700">
+            <span className="inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
               Approved to Apply
             </span>
           )}
           {isSubmitted && (
-            <span className="inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">
+            <span className="inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">
               Submitted — Awaiting Decision
             </span>
           )}
         </div>
 
-        <h3 className="mt-2 text-base font-semibold text-gray-900 leading-snug">
+        <h3 className="mt-2 text-base font-semibold text-gray-900 leading-snug dark:text-gray-100">
           {grant.title}
         </h3>
 
         <div className="mt-2 flex flex-wrap items-center gap-x-5 gap-y-1">
           {amountStr && (
-            <span className="text-sm text-gray-600">{amountStr} requested</span>
+            <span className="text-sm text-gray-600 dark:text-gray-400">{amountStr} requested</span>
           )}
           {isApproved && (
-            <span className="text-sm text-gray-500">
+            <span className="text-sm text-gray-500 dark:text-gray-400">
               Approved {formatDate(grant._creationTime)}
             </span>
           )}
           {isSubmitted && grant.submittedAt && (
-            <span className="text-sm text-gray-500">
+            <span className="text-sm text-gray-500 dark:text-gray-400">
               Submitted {formatDate(grant.submittedAt)}
             </span>
           )}
@@ -120,7 +120,7 @@ function PipelineCard({ grant }: { grant: PipelineGrant }) {
             <button
               onClick={handleMarkSubmitted}
               disabled={submitPending}
-              className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700 disabled:opacity-60"
+              className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700 disabled:opacity-60 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-200"
             >
               {submitPending ? "Saving…" : "Mark as Submitted"}
             </button>
@@ -128,7 +128,7 @@ function PipelineCard({ grant }: { grant: PipelineGrant }) {
           {isSubmitted && (
             <button
               onClick={() => setShowDecisionModal(true)}
-              className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700"
+              className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-200"
             >
               Record Decision
             </button>
@@ -158,8 +158,8 @@ export default function PipelinePage() {
   return (
     <div className="mx-auto max-w-2xl">
       <div className="mb-6">
-        <h2 className="text-xl font-semibold text-gray-900">Pipeline</h2>
-        <p className="mt-1 text-sm text-gray-500">
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Pipeline</h2>
+        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
           Grants approved to apply for and submitted applications awaiting decisions.
         </p>
       </div>
@@ -167,16 +167,16 @@ export default function PipelinePage() {
       {grants === undefined && (
         <div className="space-y-3">
           {[1, 2, 3].map((n) => (
-            <div key={n} className="h-32 animate-pulse rounded-xl bg-gray-100" />
+            <div key={n} className="h-32 animate-pulse rounded-xl bg-gray-100 dark:bg-gray-800" />
           ))}
         </div>
       )}
 
       {grants !== undefined && grants.length === 0 && (
-        <div className="rounded-xl border border-dashed border-gray-300 bg-white px-6 py-16 text-center">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-gray-100">
+        <div className="rounded-xl border border-dashed border-gray-300 bg-white px-6 py-16 text-center dark:border-gray-600 dark:bg-gray-800">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700">
             <svg
-              className="h-6 w-6 text-gray-400"
+              className="h-6 w-6 text-gray-400 dark:text-gray-500"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -189,10 +189,10 @@ export default function PipelinePage() {
               />
             </svg>
           </div>
-          <p className="text-sm font-medium text-gray-700">
+          <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
             No grants in the pipeline yet
           </p>
-          <p className="mt-1 text-sm text-gray-400">
+          <p className="mt-1 text-sm text-gray-400 dark:text-gray-500">
             Grants you approve to apply for will appear here.
           </p>
         </div>
