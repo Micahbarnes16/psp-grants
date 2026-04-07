@@ -121,3 +121,150 @@ export const approve = mutation({
     await ctx.db.patch(grantId, { status: "approved" });
   },
 });
+
+// ---------------------------------------------------------------------------
+// Active grants — awarded and currently in progress
+// ---------------------------------------------------------------------------
+export const listActive = query({
+  args: {},
+  handler: async (ctx) => {
+    await requireAllowedUser(ctx);
+    return await ctx.db
+      .query("grants")
+      .withIndex("by_status", (q) => q.eq("status", "accepted"))
+      .collect();
+  },
+});
+
+// ---------------------------------------------------------------------------
+// Renewals — accepted grants with an upcoming reapply reminder date
+// ---------------------------------------------------------------------------
+export const listRenewals = query({
+  args: {},
+  handler: async (ctx) => {
+    await requireAllowedUser(ctx);
+    const accepted = await ctx.db
+      .query("grants")
+      .withIndex("by_status", (q) => q.eq("status", "accepted"))
+      .collect();
+    return accepted
+      .filter((g) => g.reapplyReminderDate !== undefined)
+      .sort((a, b) => a.reapplyReminderDate! - b.reapplyReminderDate!);
+  },
+});
+
+// ---------------------------------------------------------------------------
+// Pipeline — approved to apply or submitted, awaiting decision
+// ---------------------------------------------------------------------------
+export const listPipeline = query({
+  args: {},
+  handler: async (ctx) => {
+    await requireAllowedUser(ctx);
+    const approved = await ctx.db
+      .query("grants")
+      .withIndex("by_status", (q) => q.eq("status", "approved"))
+      .collect();
+    const submitted = await ctx.db
+      .query("grants")
+      .withIndex("by_status", (q) => q.eq("status", "submitted"))
+      .collect();
+    return [...approved, ...submitted].sort(
+      (a, b) =>
+        (b.submittedAt ?? b._creationTime) - (a.submittedAt ?? a._creationTime)
+    );
+  },
+});
+
+// ---------------------------------------------------------------------------
+// History — dismissed, rejected, or accepted grants
+// ---------------------------------------------------------------------------
+export const listHistory = query({
+  args: {},
+  handler: async (ctx) => {
+    await requireAllowedUser(ctx);
+    const dismissed = await ctx.db
+      .query("grants")
+      .withIndex("by_status", (q) => q.eq("status", "dismissed"))
+      .collect();
+    const rejected = await ctx.db
+      .query("grants")
+      .withIndex("by_status", (q) => q.eq("status", "rejected"))
+      .collect();
+    const accepted = await ctx.db
+      .query("grants")
+      .withIndex("by_status", (q) => q.eq("status", "accepted"))
+      .collect();
+    return [...dismissed, ...rejected, ...accepted].sort(
+      (a, b) =>
+        (b.decisionDate ?? b._creationTime) -
+        (a.decisionDate ?? a._creationTime)
+    );
+  },
+});
+
+// ---------------------------------------------------------------------------
+// Pipeline mutations
+// ---------------------------------------------------------------------------
+export const markSubmitted = mutation({
+  args: { grantId: v.id("grants") },
+  handler: async (ctx, { grantId }) => {
+    await requireAllowedUser(ctx);
+    const grant = await ctx.db.get(grantId);
+    if (!grant) throw new Error("Grant not found");
+    await ctx.db.patch(grantId, { status: "submitted", submittedAt: Date.now() });
+  },
+});
+
+export const recordDecision = mutation({
+  args: {
+    grantId: v.id("grants"),
+    decision: v.union(v.literal("accepted"), v.literal("rejected")),
+    awardAmount: v.optional(v.number()),
+    decisionNotes: v.optional(v.string()),
+  },
+  handler: async (ctx, { grantId, decision, awardAmount, decisionNotes }) => {
+    await requireAllowedUser(ctx);
+    const grant = await ctx.db.get(grantId);
+    if (!grant) throw new Error("Grant not found");
+    await ctx.db.patch(grantId, {
+      status: decision,
+      awardAmount,
+      decisionNotes,
+      decisionDate: Date.now(),
+    });
+  },
+});
+
+// ---------------------------------------------------------------------------
+// Reconsider — move a dismissed grant back to pending_analysis
+// ---------------------------------------------------------------------------
+export const reconsider = mutation({
+  args: { grantId: v.id("grants") },
+  handler: async (ctx, { grantId }) => {
+    await requireAllowedUser(ctx);
+    const grant = await ctx.db.get(grantId);
+    if (!grant) throw new Error("Grant not found");
+    await ctx.db.patch(grantId, {
+      status: "pending_analysis",
+      dismissReason: undefined,
+    });
+  },
+});
+
+// ---------------------------------------------------------------------------
+// Start renewal — create a draft application linked to the original grant
+// ---------------------------------------------------------------------------
+export const startRenewal = mutation({
+  args: { grantId: v.id("grants") },
+  handler: async (ctx, { grantId }) => {
+    const identity = await requireAllowedUser(ctx);
+    const grant = await ctx.db.get(grantId);
+    if (!grant) throw new Error("Grant not found");
+    return await ctx.db.insert("applications", {
+      grantId,
+      status: "draft",
+      tokenIdentifier: identity.tokenIdentifier,
+      notes: `Renewal draft for: ${grant.title}`,
+    });
+  },
+});

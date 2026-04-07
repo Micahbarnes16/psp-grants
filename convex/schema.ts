@@ -37,9 +37,21 @@ export default defineSchema({
       v.literal("pending_analysis"),
       v.literal("under_review"),
       v.literal("dismissed"),
-      v.literal("approved")
+      v.literal("approved"),
+      v.literal("submitted"),
+      v.literal("accepted"),
+      v.literal("rejected")
     ),
     dismissReason: v.optional(v.string()),
+    // Award / decision fields
+    awardAmount: v.optional(v.number()),
+    decisionDate: v.optional(v.number()),
+    decisionNotes: v.optional(v.string()),
+    submittedAt: v.optional(v.number()),
+    // Grant period and renewal tracking
+    grantPeriodStart: v.optional(v.number()),
+    grantPeriodEnd: v.optional(v.number()),
+    reapplyReminderDate: v.optional(v.number()),
   })
     .index("by_token", ["tokenIdentifier"])
     .index("by_token_and_status", ["tokenIdentifier", "status"])
