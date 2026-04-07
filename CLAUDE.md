@@ -1,5 +1,7 @@
 @AGENTS.md
 
+Before committing ANY changes, always run `npm run build` first and fix all errors. Do not commit or push until the build passes cleanly. This is a Vercel-deployed project — if the build fails locally, it will fail in production.
+
 <!-- convex-ai-start -->
 This project uses [Convex](https://convex.dev) as its backend.
 
