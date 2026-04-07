@@ -78,18 +78,35 @@ const bottomItems = [
   },
 ];
 
-export function Sidebar() {
+interface SidebarProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
 
-  return (
-    <aside className="flex w-56 flex-col border-r border-gray-200 bg-white">
-      <div className="flex h-14 items-center px-4 border-b border-gray-200">
-        <span className="text-sm font-semibold text-gray-900 tracking-tight">
+  const navContent = (
+    <>
+      {/* Header */}
+      <div className="flex h-14 shrink-0 items-center justify-between border-b border-gray-200 px-4">
+        <span className="text-sm font-semibold tracking-tight text-gray-900">
           PSP Grants
         </span>
+        {/* Close button — mobile only */}
+        <button
+          onClick={onClose}
+          className="rounded-md p-1 text-gray-400 hover:text-gray-600 md:hidden"
+          aria-label="Close navigation"
+        >
+          <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+            <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" />
+          </svg>
+        </button>
       </div>
 
-      <nav className="flex flex-1 flex-col justify-between px-3 py-4">
+      {/* Nav */}
+      <nav className="flex flex-1 flex-col justify-between overflow-y-auto px-3 py-4">
         <ul className="space-y-0.5">
           {navItems.map((item) => {
             const isActive =
@@ -99,6 +116,7 @@ export function Sidebar() {
               <li key={item.href}>
                 <Link
                   href={item.href}
+                  onClick={onClose}
                   className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
                     isActive
                       ? "bg-gray-100 text-gray-900"
@@ -123,6 +141,7 @@ export function Sidebar() {
               <li key={item.href}>
                 <Link
                   href={item.href}
+                  onClick={onClose}
                   className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
                     isActive
                       ? "bg-gray-100 text-gray-900"
@@ -139,6 +158,34 @@ export function Sidebar() {
           })}
         </ul>
       </nav>
-    </aside>
+    </>
+  );
+
+  return (
+    <>
+      {/* Backdrop — mobile only, shown when open */}
+      {isOpen && (
+        <div
+          className="fixed inset-0 z-30 bg-black/40 md:hidden"
+          onClick={onClose}
+          aria-hidden="true"
+        />
+      )}
+
+      {/* Sidebar panel */}
+      <aside
+        className={[
+          // Base: fixed overlay on mobile, relative in flow on desktop
+          "fixed inset-y-0 left-0 z-40 flex w-64 flex-col bg-white",
+          "transition-transform duration-200 ease-in-out",
+          // Desktop: participates in flex layout, always visible
+          "md:relative md:z-auto md:w-56 md:translate-x-0 md:border-r md:border-gray-200",
+          // Mobile: slide in/out
+          isOpen ? "translate-x-0 shadow-xl" : "-translate-x-full",
+        ].join(" ")}
+      >
+        {navContent}
+      </aside>
+    </>
   );
 }

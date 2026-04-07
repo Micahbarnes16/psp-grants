@@ -9,7 +9,7 @@ export default function InboxPage() {
   const grants = useQuery(api.grants.listInbox, isAuthenticated ? {} : "skip");
 
   return (
-    <div className="mx-auto max-w-2xl">
+    <div className="mx-auto max-w-5xl">
       <div className="mb-6">
         <h2 className="text-xl font-semibold text-gray-900">Inbox</h2>
         <p className="mt-1 text-sm text-gray-500">
@@ -19,7 +19,7 @@ export default function InboxPage() {
 
       {/* Loading */}
       {grants === undefined && (
-        <div className="space-y-3">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
           {[1, 2, 3].map((n) => (
             <div
               key={n}
@@ -58,7 +58,7 @@ export default function InboxPage() {
 
       {/* Grant cards */}
       {grants !== undefined && grants.length > 0 && (
-        <div className="space-y-3">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
           {grants.map((grant) => (
             <GrantCard key={grant._id} grant={grant} />
           ))}

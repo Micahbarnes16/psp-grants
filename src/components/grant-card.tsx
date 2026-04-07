@@ -158,7 +158,7 @@ export function GrantCard({ grant }: GrantCardProps) {
         </div>
 
         {/* Title */}
-        <h3 className="mt-2 text-base font-semibold text-gray-900 leading-snug">
+        <h3 className="mt-2 line-clamp-2 text-base font-semibold text-gray-900 leading-snug">
           {grant.title}
         </h3>
 
@@ -224,13 +224,13 @@ export function GrantCard({ grant }: GrantCardProps) {
           <button
             onClick={handleReview}
             disabled={reviewPending}
-            className="flex-1 rounded-lg bg-gray-900 px-3 py-2 text-sm font-medium text-white hover:bg-gray-700 disabled:opacity-60 sm:flex-none sm:px-4"
+            className="flex-1 rounded-lg bg-gray-900 px-3 py-2 text-sm font-medium text-white hover:bg-gray-700 disabled:opacity-60"
           >
             {reviewPending ? "Opening…" : "Review"}
           </button>
           <button
             onClick={() => setShowDismiss(true)}
-            className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 sm:flex-none sm:px-4"
+            className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50"
           >
             Dismiss
           </button>
