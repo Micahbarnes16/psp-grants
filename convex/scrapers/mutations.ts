@@ -74,13 +74,19 @@ export const upsertGrant = internalMutation({
       .first();
 
     if (existing) {
-      // Refresh volatile fields on each scrape run
+      // Refresh volatile fields on each scrape run.
+      // Also backfill status on records inserted before it became required.
+      const statusPatch =
+        (existing as { status?: string }).status === undefined
+          ? { status: "pending_analysis" as const }
+          : {};
       await ctx.db.patch(existing._id, {
         deadline: args.deadline,
         rawText: args.rawText,
         amountMin: args.amountMin,
         amountMax: args.amountMax,
         funderId: args.funderId,
+        ...statusPatch,
       });
       return false;
     }

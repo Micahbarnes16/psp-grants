@@ -21,7 +21,14 @@ export const listInbox = query({
       .withIndex("by_status", (q) => q.eq("status", "under_review"))
       .take(200);
 
-    const all: Doc<"grants">[] = [...pending, ...underReview];
+    // Catch legacy records inserted before `status` was enforced by the schema.
+    // Index scans can't match undefined, so we do a full scan filtered in JS.
+    const allGrants = await ctx.db.query("grants").collect();
+    const noStatus = allGrants.filter(
+      (g) => (g as { status?: string }).status === undefined
+    );
+
+    const all: Doc<"grants">[] = [...pending, ...underReview, ...noStatus];
 
     // Sort: deadline ascending; no deadline at the bottom
     all.sort((a, b) => {
