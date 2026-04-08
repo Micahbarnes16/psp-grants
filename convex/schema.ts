@@ -82,6 +82,11 @@ export default defineSchema({
     content: v.string(),
     alignmentScore: v.optional(v.number()),
     summary: v.optional(v.string()),
+    pros: v.optional(v.array(v.string())),
+    cons: v.optional(v.array(v.string())),
+    recommendedFundingNeed: v.optional(v.string()),
+    suggestedApproach: v.optional(v.string()),
+    draftContent: v.optional(v.string()),
     tokenIdentifier: v.string(),
   })
     .index("by_grant", ["grantId"])

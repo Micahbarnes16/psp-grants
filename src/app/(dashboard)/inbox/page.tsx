@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { useQuery, useConvexAuth } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { GrantCard } from "@/components/grant-card";
@@ -7,6 +8,22 @@ import { GrantCard } from "@/components/grant-card";
 export default function InboxPage() {
   const { isAuthenticated } = useConvexAuth();
   const grants = useQuery(api.grants.listInbox, isAuthenticated ? {} : "skip");
+  const analysisScores = useQuery(
+    api.grants.listAnalysisScores,
+    isAuthenticated ? {} : "skip"
+  );
+
+  const scoreMap = useMemo(() => {
+    const map: Record<string, number> = {};
+    if (analysisScores) {
+      for (const a of analysisScores) {
+        if (a.alignmentScore !== undefined) {
+          map[a.grantId as string] = a.alignmentScore;
+        }
+      }
+    }
+    return map;
+  }, [analysisScores]);
 
   return (
     <div className="mx-auto max-w-5xl">
@@ -60,7 +77,11 @@ export default function InboxPage() {
       {grants !== undefined && grants.length > 0 && (
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
           {grants.map((grant) => (
-            <GrantCard key={grant._id} grant={grant} />
+            <GrantCard
+              key={grant._id}
+              grant={grant}
+              alignmentScore={scoreMap[grant._id as string]}
+            />
           ))}
         </div>
       )}

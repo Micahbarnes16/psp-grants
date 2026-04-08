@@ -189,17 +189,25 @@ type ProfileData = {
 };
 
 const EMPTY_PROFILE: ProfileData = {
-  name: "",
-  ein: "",
-  mission: "",
-  primaryPrograms: "",
-  geographicScope: "",
-  annualBudget: "",
-  foundedYear: "",
-  website: "",
+  name: "Public Servants' Prayer Inc",
+  ein: "82-2232515",
+  mission: "We provide prayer and pastoral care in the political arena.",
+  primaryPrograms:
+    "Weekly Bible studies for the capitol community, weekly prayer times, career coaching and discipleship, personal counseling, daily evangelistic opportunities, funerals and weddings, annual Statehouse Prayer Services, Women's Statehouse Days, Pastors' Statehouse Days, biweekly Bagels and Books events, birthday card program for legislators.",
+  geographicScope: "all_50_states",
+  annualBudget: "100k_500k",
+  foundedYear: "2004",
+  website: "https://thepsp.org",
   contactName: "",
   contactEmail: "",
-  focusAreas: [],
+  focusAreas: [
+    "evangelism",
+    "discipleship",
+    "prayer",
+    "pastoral care",
+    "civic engagement",
+    "legislative outreach",
+  ],
 };
 
 function ProfileSection({

@@ -1,4 +1,4 @@
-import { query, mutation } from "./_generated/server";
+import { query, mutation, internalQuery, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 import { Doc, Id } from "./_generated/dataModel";
 import { requireAllowedUser } from "./lib/auth";
@@ -266,5 +266,115 @@ export const startRenewal = mutation({
       tokenIdentifier: identity.tokenIdentifier,
       notes: `Renewal draft for: ${grant.title}`,
     });
+  },
+});
+
+// ---------------------------------------------------------------------------
+// AI analysis — public queries
+// ---------------------------------------------------------------------------
+export const getAnalysis = query({
+  args: { grantId: v.id("grants") },
+  handler: async (ctx, { grantId }) => {
+    await requireAllowedUser(ctx);
+    return await ctx.db
+      .query("analysis")
+      .withIndex("by_grant", (q) => q.eq("grantId", grantId))
+      .first();
+  },
+});
+
+export const listAnalysisScores = query({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await requireAllowedUser(ctx);
+    const analyses = await ctx.db
+      .query("analysis")
+      .withIndex("by_token", (q) =>
+        q.eq("tokenIdentifier", identity.tokenIdentifier)
+      )
+      .take(500);
+    return analyses.map((a) => ({
+      grantId: a.grantId,
+      alignmentScore: a.alignmentScore,
+    }));
+  },
+});
+
+// ---------------------------------------------------------------------------
+// AI analysis — internal helpers (called from convex/ai.ts actions)
+// ---------------------------------------------------------------------------
+export const fetchGrantContext = internalQuery({
+  args: {
+    grantId: v.id("grants"),
+    tokenIdentifier: v.string(),
+  },
+  handler: async (ctx, { grantId, tokenIdentifier }) => {
+    const grant = await ctx.db.get(grantId);
+    if (!grant) return null;
+    const funder = grant.funderId ? await ctx.db.get(grant.funderId) : null;
+    const profile = await ctx.db
+      .query("psp_profile")
+      .withIndex("by_token", (q) => q.eq("tokenIdentifier", tokenIdentifier))
+      .first();
+    const analysis = await ctx.db
+      .query("analysis")
+      .withIndex("by_grant", (q) => q.eq("grantId", grantId))
+      .first();
+    return { grant, funder, profile, analysis };
+  },
+});
+
+export const storeAnalysisResult = internalMutation({
+  args: {
+    grantId: v.id("grants"),
+    tokenIdentifier: v.string(),
+    alignmentScore: v.number(),
+    summary: v.string(),
+    pros: v.array(v.string()),
+    cons: v.array(v.string()),
+    recommendedFundingNeed: v.string(),
+    suggestedApproach: v.string(),
+    content: v.string(),
+  },
+  handler: async (ctx, { grantId, tokenIdentifier, content, ...fields }) => {
+    const existing = await ctx.db
+      .query("analysis")
+      .withIndex("by_grant", (q) => q.eq("grantId", grantId))
+      .first();
+    if (existing) {
+      await ctx.db.patch(existing._id, { content, ...fields });
+    } else {
+      await ctx.db.insert("analysis", {
+        grantId,
+        tokenIdentifier,
+        content,
+        ...fields,
+      });
+    }
+    await ctx.db.patch(grantId, { status: "under_review" });
+  },
+});
+
+export const storeDraftContent = internalMutation({
+  args: {
+    grantId: v.id("grants"),
+    tokenIdentifier: v.string(),
+    draftContent: v.string(),
+  },
+  handler: async (ctx, { grantId, tokenIdentifier, draftContent }) => {
+    const existing = await ctx.db
+      .query("analysis")
+      .withIndex("by_grant", (q) => q.eq("grantId", grantId))
+      .first();
+    if (existing) {
+      await ctx.db.patch(existing._id, { draftContent });
+    } else {
+      await ctx.db.insert("analysis", {
+        grantId,
+        tokenIdentifier,
+        content: "",
+        draftContent,
+      });
+    }
   },
 });

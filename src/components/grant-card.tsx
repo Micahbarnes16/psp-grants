@@ -100,9 +100,10 @@ interface GrantCardProps {
     acceptsUnsolicited?: string;
     requiresLoi?: boolean;
   };
+  alignmentScore?: number;
 }
 
-export function GrantCard({ grant }: GrantCardProps) {
+export function GrantCard({ grant, alignmentScore }: GrantCardProps) {
   const router = useRouter();
   const setUnderReview = useMutation(api.grants.setUnderReview);
   const dismissGrant = useMutation(api.grants.dismiss);
@@ -154,6 +155,19 @@ export function GrantCard({ grant }: GrantCardProps) {
           <UnsolicitedBadge value={grant.acceptsUnsolicited} />
           {grant.requiresLoi && (
             <Badge color="violet">LOI Required</Badge>
+          )}
+          {alignmentScore !== undefined && (
+            <span
+              className={`ml-auto rounded-full px-2 py-0.5 text-xs font-bold ${
+                alignmentScore >= 70
+                  ? "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300"
+                  : alignmentScore >= 40
+                    ? "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300"
+                    : "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300"
+              }`}
+            >
+              {alignmentScore}
+            </span>
           )}
         </div>
 
