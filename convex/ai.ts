@@ -1,7 +1,9 @@
 "use node";
 
-import { action } from "./_generated/server";
+import { action, internalAction } from "./_generated/server";
+import type { ActionCtx } from "./_generated/server";
 import { v } from "convex/values";
+import type { Id } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
 import { requireAllowedUser } from "./lib/auth";
 import Anthropic from "@anthropic-ai/sdk";
@@ -28,7 +30,11 @@ const BUDGET_LABELS: Record<string, string> = {
 function fmtAmount(min?: number, max?: number): string {
   if (!min && !max) return "Not specified";
   const fmt = (n: number) =>
-    n.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+    n.toLocaleString("en-US", {
+      style: "currency",
+      currency: "USD",
+      maximumFractionDigits: 0,
+    });
   if (min && max && min !== max) return `${fmt(min)} – ${fmt(max)}`;
   if (max) return `Up to ${fmt(max)}`;
   return `${fmt(min!)}+`;
@@ -80,21 +86,24 @@ const PSP_CONTEXT = `## PSP's Current Funding Needs
 - Preferences: non-partisan, non-political, minimum $5,000 grant size`;
 
 // ---------------------------------------------------------------------------
-// analyzeGrant — analyze alignment between a grant and PSP's mission
+// Core analysis logic — shared between public and internal actions
 // ---------------------------------------------------------------------------
-export const analyzeGrant = action({
-  args: { grantId: v.id("grants") },
-  handler: async (ctx, { grantId }) => {
-    const identity = await requireAllowedUser(ctx);
+async function runAnalysis(
+  ctx: ActionCtx,
+  grantId: Id<"grants">,
+  tokenIdentifier: string
+): Promise<void> {
+  const context = await ctx.runQuery(internal.grants.fetchGrantContext, {
+    grantId,
+    tokenIdentifier,
+  });
+  if (!context) {
+    console.warn(`[analyzeGrant] Grant ${grantId} not found — skipping.`);
+    return;
+  }
+  const { grant, profile } = context;
 
-    const context = await ctx.runQuery(internal.grants.fetchGrantContext, {
-      grantId,
-      tokenIdentifier: identity.tokenIdentifier,
-    });
-    if (!context) throw new Error("Grant not found");
-    const { grant, profile } = context;
-
-    const prompt = `You are a grant analysis assistant for a nonprofit organization.
+  const prompt = `You are a grant analysis assistant for a nonprofit organization.
 
 ${orgBlock(profile as Record<string, unknown> | null)}
 
@@ -116,50 +125,76 @@ Return ONLY valid JSON with no other text, markdown, or code fences:
   "suggestedApproach": "<2-3 sentences of advice on how to approach the application>"
 }`;
 
-    let result = {
-      alignmentScore: 0,
-      summary: "Analysis failed — please try again.",
-      pros: [] as string[],
-      cons: [] as string[],
-      recommendedFundingNeed: "general operations",
-      suggestedApproach: "",
-    };
+  let result = {
+    alignmentScore: 0,
+    summary: "Analysis failed — please try again.",
+    pros: [] as string[],
+    cons: [] as string[],
+    recommendedFundingNeed: "general operations",
+    suggestedApproach: "",
+  };
 
-    try {
-      const apiKey = process.env.ANTHROPIC_API_KEY;
-      if (!apiKey) throw new Error("ANTHROPIC_API_KEY is not set");
+  try {
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    if (!apiKey) throw new Error("ANTHROPIC_API_KEY is not set");
 
-      const client = new Anthropic({ apiKey });
-      const message = await client.messages.create({
-        model: "claude-sonnet-4-5",
-        max_tokens: 1024,
-        messages: [{ role: "user", content: prompt }],
-      });
-
-      const text =
-        message.content[0].type === "text" ? message.content[0].text : "";
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) throw new Error("No JSON found in Claude response");
-      const parsed = JSON.parse(jsonMatch[0]);
-
-      result = {
-        alignmentScore: Number(parsed.alignmentScore ?? 0),
-        summary: String(parsed.summary ?? ""),
-        pros: Array.isArray(parsed.pros) ? parsed.pros.map(String) : [],
-        cons: Array.isArray(parsed.cons) ? parsed.cons.map(String) : [],
-        recommendedFundingNeed: String(parsed.recommendedFundingNeed ?? "general operations"),
-        suggestedApproach: String(parsed.suggestedApproach ?? ""),
-      };
-    } catch (err) {
-      result.summary = `Analysis failed: ${err instanceof Error ? err.message : "unknown error"}`;
-    }
-
-    await ctx.runMutation(internal.grants.storeAnalysisResult, {
-      grantId,
-      tokenIdentifier: identity.tokenIdentifier,
-      ...result,
-      content: JSON.stringify(result),
+    const client = new Anthropic({ apiKey });
+    const message = await client.messages.create({
+      model: "claude-sonnet-4-5",
+      max_tokens: 1024,
+      messages: [{ role: "user", content: prompt }],
     });
+
+    const text =
+      message.content[0].type === "text" ? message.content[0].text : "";
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error("No JSON found in Claude response");
+    const parsed = JSON.parse(jsonMatch[0]);
+
+    result = {
+      alignmentScore: Number(parsed.alignmentScore ?? 0),
+      summary: String(parsed.summary ?? ""),
+      pros: Array.isArray(parsed.pros) ? parsed.pros.map(String) : [],
+      cons: Array.isArray(parsed.cons) ? parsed.cons.map(String) : [],
+      recommendedFundingNeed: String(
+        parsed.recommendedFundingNeed ?? "general operations"
+      ),
+      suggestedApproach: String(parsed.suggestedApproach ?? ""),
+    };
+  } catch (err) {
+    result.summary = `Analysis failed: ${err instanceof Error ? err.message : "unknown error"}`;
+    console.error(`[analyzeGrant] Error analyzing grant ${grantId}:`, err);
+  }
+
+  await ctx.runMutation(internal.grants.storeAnalysisResult, {
+    grantId,
+    tokenIdentifier,
+    ...result,
+    content: JSON.stringify(result),
+  });
+}
+
+// ---------------------------------------------------------------------------
+// analyzeGrant — public, called from UI with authenticated user
+// ---------------------------------------------------------------------------
+export const analyzeGrant = action({
+  args: { grantId: v.id("grants") },
+  handler: async (ctx, { grantId }) => {
+    const identity = await requireAllowedUser(ctx);
+    await runAnalysis(ctx, grantId, identity.tokenIdentifier);
+  },
+});
+
+// ---------------------------------------------------------------------------
+// analyzeGrantInternal — internal, scheduled by scraper pipeline (no auth)
+// Falls back to hardcoded PSP profile data when no profile exists.
+// ---------------------------------------------------------------------------
+export const analyzeGrantInternal = internalAction({
+  args: { grantId: v.id("grants") },
+  handler: async (ctx, { grantId }) => {
+    // Use "" as tokenIdentifier → fetchGrantContext returns profile: null
+    // → orgBlock falls back to hardcoded PSP data. Store with "system" token.
+    await runAnalysis(ctx, grantId, "system");
   },
 });
 
@@ -230,6 +265,7 @@ Write the complete letter, ready to submit with minimal editing. Do not include 
           : "Draft generation failed — unexpected response format.";
     } catch (err) {
       draftContent = `Draft generation failed: ${err instanceof Error ? err.message : "unknown error"}`;
+      console.error(`[generateDraft] Error for grant ${grantId}:`, err);
     }
 
     await ctx.runMutation(internal.grants.storeDraftContent, {

@@ -286,13 +286,10 @@ export const getAnalysis = query({
 export const listAnalysisScores = query({
   args: {},
   handler: async (ctx) => {
-    const identity = await requireAllowedUser(ctx);
-    const analyses = await ctx.db
-      .query("analysis")
-      .withIndex("by_token", (q) =>
-        q.eq("tokenIdentifier", identity.tokenIdentifier)
-      )
-      .take(500);
+    await requireAllowedUser(ctx);
+    // Return all analyses (shared single-org app) so auto-generated scores
+    // from the scraper pipeline are visible to every allowed user.
+    const analyses = await ctx.db.query("analysis").take(500);
     return analyses.map((a) => ({
       grantId: a.grantId,
       alignmentScore: a.alignmentScore,
@@ -376,5 +373,49 @@ export const storeDraftContent = internalMutation({
         draftContent,
       });
     }
+  },
+});
+
+// ---------------------------------------------------------------------------
+// One-time admin: clear all inbox grants (pending_analysis / under_review)
+// and their associated analysis records.
+// Run via: npx convex run grants:clearInboxGrants --prod
+// ---------------------------------------------------------------------------
+export const clearInboxGrants = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const pending = await ctx.db
+      .query("grants")
+      .withIndex("by_status", (q) => q.eq("status", "pending_analysis"))
+      .take(200);
+
+    const underReview = await ctx.db
+      .query("grants")
+      .withIndex("by_status", (q) => q.eq("status", "under_review"))
+      .take(200);
+
+    // Legacy records with no status
+    const allGrants = await ctx.db.query("grants").take(1000);
+    const noStatus = allGrants.filter(
+      (g) => (g as { status?: string }).status === undefined
+    );
+
+    const toDelete = [...pending, ...underReview, ...noStatus];
+
+    let deleted = 0;
+    for (const grant of toDelete) {
+      const analyses = await ctx.db
+        .query("analysis")
+        .withIndex("by_grant", (q) => q.eq("grantId", grant._id))
+        .take(10);
+      for (const a of analyses) {
+        await ctx.db.delete(a._id);
+      }
+      await ctx.db.delete(grant._id);
+      deleted++;
+    }
+
+    console.log(`[clearInboxGrants] Deleted ${deleted} grants and their analyses.`);
+    return { deleted };
   },
 });

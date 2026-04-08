@@ -1,4 +1,5 @@
 import { internalMutation } from "../_generated/server";
+import { internal } from "../_generated/api";
 import { v } from "convex/values";
 
 const acceptsUnsolicitedV = v.optional(
@@ -91,7 +92,7 @@ export const upsertGrant = internalMutation({
       return false;
     }
 
-    await ctx.db.insert("grants", {
+    const grantId = await ctx.db.insert("grants", {
       title: args.title,
       funderName: args.funderName,
       funderId: args.funderId,
@@ -107,6 +108,12 @@ export const upsertGrant = internalMutation({
       discoveredAt: Date.now(),
       status: "pending_analysis",
     });
+
+    // Auto-analyze every new grant using the background action.
+    await ctx.scheduler.runAfter(0, internal.ai.analyzeGrantInternal, {
+      grantId,
+    });
+
     return true;
   },
 });
