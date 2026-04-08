@@ -84,55 +84,6 @@ function AlignmentBar({ score }: { score: number }) {
   );
 }
 
-function DraftModal({
-  content,
-  onClose,
-}: {
-  content: string;
-  onClose: () => void;
-}) {
-  const [copied, setCopied] = useState(false);
-
-  async function handleCopy() {
-    await navigator.clipboard.writeText(content);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2500);
-  }
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="flex w-full max-w-2xl flex-col rounded-xl bg-white shadow-xl dark:bg-gray-800 max-h-[85vh]">
-        <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4 dark:border-gray-700">
-          <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-            Generated Draft Application
-          </h2>
-          <button
-            onClick={onClose}
-            className="rounded-md p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-          >
-            <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-              <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" />
-            </svg>
-          </button>
-        </div>
-        <div className="flex-1 overflow-y-auto px-5 py-4">
-          <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-gray-700 dark:text-gray-300">
-            {content}
-          </pre>
-        </div>
-        <div className="border-t border-gray-200 px-5 py-4 dark:border-gray-700">
-          <button
-            onClick={handleCopy}
-            className="w-full rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-gray-700 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-200"
-          >
-            {copied ? "Copied!" : "Copy to Clipboard"}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export default function GrantDetailPage({
   params,
 }: {
@@ -158,11 +109,11 @@ export default function GrantDetailPage({
   const generateDraftAction = useAction(api.ai.generateDraft);
 
   const [showDismiss, setShowDismiss] = useState(false);
-  const [showDraft, setShowDraft] = useState(false);
   const [approvePending, setApprovePending] = useState(false);
   const [dismissPending, setDismissPending] = useState(false);
   const [analysing, setAnalysing] = useState(false);
   const [generatingDraft, setGeneratingDraft] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   // Loading
   if (result === undefined) {
@@ -197,6 +148,7 @@ export default function GrantDetailPage({
     grant.deadline - now < 30 * MS_PER_DAY;
 
   const hasAnalysis = analysis != null;
+  const hasDraft = hasAnalysis && !!analysis.draftContent;
 
   async function handleApprove() {
     setApprovePending(true);
@@ -234,12 +186,18 @@ export default function GrantDetailPage({
     setGeneratingDraft(true);
     try {
       await generateDraftAction({ grantId: grant._id });
-      setShowDraft(true);
     } catch (err) {
       console.error("Draft generation failed:", err);
     } finally {
       setGeneratingDraft(false);
     }
+  }
+
+  async function handleCopy() {
+    if (!analysis?.draftContent) return;
+    await navigator.clipboard.writeText(analysis.draftContent);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2500);
   }
 
   return (
@@ -287,7 +245,15 @@ export default function GrantDetailPage({
             {approvePending ? "Approving…" : "✓ Approve to Apply"}
           </button>
 
-          {hasAnalysis ? (
+          {!hasAnalysis ? (
+            <button
+              onClick={handleAnalyze}
+              disabled={analysing}
+              className="flex-1 rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+            >
+              {analysing ? "Analyzing…" : "✦ Analyze with AI"}
+            </button>
+          ) : !hasDraft ? (
             <button
               onClick={handleGenerateDraft}
               disabled={generatingDraft}
@@ -297,11 +263,11 @@ export default function GrantDetailPage({
             </button>
           ) : (
             <button
-              onClick={handleAnalyze}
-              disabled={analysing}
-              className="flex-1 rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+              onClick={handleGenerateDraft}
+              disabled={generatingDraft}
+              className="flex-1 rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-60 dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-700"
             >
-              {analysing ? "Analyzing…" : "✦ Analyze with AI"}
+              {generatingDraft ? "Regenerating…" : "Regenerate Draft"}
             </button>
           )}
 
@@ -316,7 +282,9 @@ export default function GrantDetailPage({
         {/* Grant details */}
         <div className="rounded-xl border border-gray-200 bg-white divide-y divide-gray-100 dark:border-gray-700 dark:bg-gray-800 dark:divide-gray-700">
           <div className="px-5 py-4">
-            <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Grant Details</h2>
+            <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+              Grant Details
+            </h2>
           </div>
           <dl className="px-5 py-4 space-y-3">
             {grant.deadline !== undefined && (
@@ -402,10 +370,7 @@ export default function GrantDetailPage({
                 </h3>
                 <ul className="space-y-1">
                   {analysis.pros.map((pro, i) => (
-                    <li
-                      key={i}
-                      className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400"
-                    >
+                    <li key={i} className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400">
                       <span className="mt-0.5 shrink-0 text-green-500">✓</span>
                       {pro}
                     </li>
@@ -421,10 +386,7 @@ export default function GrantDetailPage({
                 </h3>
                 <ul className="space-y-1">
                   {analysis.cons.map((con, i) => (
-                    <li
-                      key={i}
-                      className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400"
-                    >
+                    <li key={i} className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400">
                       <span className="mt-0.5 shrink-0 text-red-400">✗</span>
                       {con}
                     </li>
@@ -454,6 +416,37 @@ export default function GrantDetailPage({
                 </p>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Draft Application card — persisted, shown every visit */}
+        {hasDraft && (
+          <div className="mt-4 rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+            <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4 dark:border-gray-700">
+              <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                Draft Application
+              </h2>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleCopy}
+                  className="rounded-md border border-gray-200 px-2.5 py-1 text-xs font-medium text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-700"
+                >
+                  {copied ? "Copied!" : "Copy"}
+                </button>
+                <button
+                  onClick={handleGenerateDraft}
+                  disabled={generatingDraft}
+                  className="rounded-md border border-gray-200 px-2.5 py-1 text-xs font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-700"
+                >
+                  {generatingDraft ? "Regenerating…" : "Regenerate"}
+                </button>
+              </div>
+            </div>
+            <div className="px-5 py-4">
+              <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-gray-700 dark:text-gray-300">
+                {analysis.draftContent}
+              </pre>
+            </div>
           </div>
         )}
 
@@ -498,7 +491,7 @@ export default function GrantDetailPage({
           </div>
         )}
 
-        {/* Bottom actions (mobile convenience) */}
+        {/* Bottom actions */}
         <div className="mt-6 flex flex-col gap-2 sm:flex-row pb-8">
           <button
             onClick={handleApprove}
@@ -522,13 +515,6 @@ export default function GrantDetailPage({
           onConfirm={handleDismiss}
           onCancel={() => setShowDismiss(false)}
           isPending={dismissPending}
-        />
-      )}
-
-      {showDraft && analysis?.draftContent && (
-        <DraftModal
-          content={analysis.draftContent}
-          onClose={() => setShowDraft(false)}
         />
       )}
     </>

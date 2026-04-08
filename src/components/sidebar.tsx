@@ -16,6 +16,17 @@ function InboxBadge() {
   );
 }
 
+function WatchlistBadge() {
+  const { isAuthenticated } = useConvexAuth();
+  const count = useQuery(api.grants.getWatchlistCount, isAuthenticated ? {} : "skip");
+  if (!count) return null;
+  return (
+    <span className="ml-auto rounded-full bg-gray-400 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white dark:bg-gray-600 dark:text-gray-200">
+      {count > 99 ? "99+" : count}
+    </span>
+  );
+}
+
 const navItems = [
   {
     label: "Inbox",
@@ -24,6 +35,17 @@ const navItems = [
     icon: (
       <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 13.5h3.86a2.25 2.25 0 0 1 2.012 1.244l.256.512a2.25 2.25 0 0 0 2.013 1.244h3.218a2.25 2.25 0 0 0 2.013-1.244l.256-.512a2.25 2.25 0 0 1 2.013-1.244h3.859m-19.5.338V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18v-4.162c0-.224-.034-.447-.1-.661L19.24 5.338a2.25 2.25 0 0 0-2.15-1.588H6.911a2.25 2.25 0 0 0-2.15 1.588L2.35 13.177a2.25 2.25 0 0 0-.1.661Z" />
+      </svg>
+    ),
+  },
+  {
+    label: "Watchlist",
+    href: "/watchlist",
+    badge: <WatchlistBadge />,
+    icon: (
+      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
       </svg>
     ),
   },
@@ -111,7 +133,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
           {navItems.map((item) => {
             const isActive =
               pathname === item.href ||
-              (item.href === "/inbox" && pathname.startsWith("/inbox"));
+              (item.href === "/inbox" && pathname.startsWith("/inbox/"));
             return (
               <li key={item.href}>
                 <Link

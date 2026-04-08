@@ -60,44 +60,77 @@ export function parseAmounts(text: string): {
   amountMin?: number;
   amountMax?: number;
 } {
-  // "$5,000 to $25,000" or "$5,000 - $25,000" or "$5,000–$25,000"
-  const rangeMatch = text.match(
-    /\$\s*([0-9,]+(?:\.[0-9]+)?)[kK]?\s*(?:to|–|—|-)\s*\$\s*([0-9,]+(?:\.[0-9]+)?)[kK]?/i
+  // Handles: $5,000 | $5k | $5K | $2.5 million | $2.5M | $2,500,000
+  function parseDollar(num: string, suffix?: string): number {
+    const n = parseFloat(num.replace(/,/g, ""));
+    if (suffix && /million/i.test(suffix)) return Math.round(n * 1_000_000);
+    if (suffix && /^M$/.test(suffix.trim())) return Math.round(n * 1_000_000);
+    if (suffix && /[kK]/.test(suffix)) return Math.round(n * 1_000);
+    return Math.round(n);
+  }
+
+  const NUM = `([0-9,]+(?:\\.[0-9]+)?)`;
+  const SUF = `\\s*(million|M|[kK])?`;
+
+  // "$X[k/M/million] to $Y[k/M/million]"
+  const rangeRe = new RegExp(
+    `\\$\\s*${NUM}${SUF}\\s*(?:to|–|—|-)\\s*\\$\\s*${NUM}${SUF}`,
+    "i"
   );
+  const rangeMatch = text.match(rangeRe);
   if (rangeMatch) {
     return {
-      amountMin: parseUsd(rangeMatch[1]),
-      amountMax: parseUsd(rangeMatch[2]),
+      amountMin: parseDollar(rangeMatch[1], rangeMatch[2]),
+      amountMax: parseDollar(rangeMatch[3], rangeMatch[4]),
     };
   }
 
-  // "up to $50,000"
-  const upToMatch = text.match(/up\s+to\s+\$\s*([0-9,]+(?:\.[0-9]+)?)[kK]?/i);
-  if (upToMatch) {
-    return { amountMax: parseUsd(upToMatch[1]) };
-  }
-
-  // "maximum of $X"
-  const maxMatch = text.match(
-    /maximum(?:\s+(?:of|grant))?\s+(?:is\s+)?\$\s*([0-9,]+(?:\.[0-9]+)?)[kK]?/i
+  // "up to $X [million/M/k]"
+  const upToRe = new RegExp(
+    `up\\s+to\\s+\\$\\s*${NUM}${SUF}`,
+    "i"
   );
-  if (maxMatch) {
-    return { amountMax: parseUsd(maxMatch[1]) };
+  const upToMatch = text.match(upToRe);
+  if (upToMatch) {
+    return { amountMax: parseDollar(upToMatch[1], upToMatch[2]) };
   }
 
-  // Average or typical "$X"
-  const avgMatch = text.match(/average[^$\n]{0,20}\$\s*([0-9,]+(?:\.[0-9]+)?)[kK]?/i);
+  // "maximum [of/grant] $X [million/M/k]"
+  const maxRe = new RegExp(
+    `maximum(?:\\s+(?:of|grant))?\\s+(?:is\\s+)?\\$\\s*${NUM}${SUF}`,
+    "i"
+  );
+  const maxMatch = text.match(maxRe);
+  if (maxMatch) {
+    return { amountMax: parseDollar(maxMatch[1], maxMatch[2]) };
+  }
+
+  // "$X.X million" or "$XM" standalone (before plain-number match to avoid grabbing $3 from $3.5 million)
+  const millionRe = new RegExp(`\\$\\s*${NUM}\\s*(million|MM)\\b`, "i");
+  const millionMatch = text.match(millionRe);
+  if (millionMatch) {
+    return { amountMax: parseDollar(millionMatch[1], millionMatch[2]) };
+  }
+
+  // "average ... $X"
+  const avgRe = new RegExp(
+    `average[^$\\n]{0,20}\\$\\s*${NUM}${SUF}`,
+    "i"
+  );
+  const avgMatch = text.match(avgRe);
   if (avgMatch) {
-    const v = parseUsd(avgMatch[1]);
+    const v = parseDollar(avgMatch[1], avgMatch[2]);
     return { amountMin: v, amountMax: v };
   }
 
-  return {};
-}
+  // "$X,XXX" comma-separated (require at least one comma group to avoid tiny amounts)
+  const commaRe = /\$\s*([0-9]{1,3}(?:,[0-9]{3})+(?:\.[0-9]+)?)/;
+  const commaMatch = text.match(commaRe);
+  if (commaMatch) {
+    return { amountMax: parseDollar(commaMatch[1]) };
+  }
 
-function parseUsd(raw: string): number {
-  const n = parseFloat(raw.replace(/,/g, ""));
-  return Math.round(n);
+  return {};
 }
 
 const MONTH_RE =

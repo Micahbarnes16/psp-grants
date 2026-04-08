@@ -172,6 +172,15 @@ Return ONLY valid JSON with no other text, markdown, or code fences:
     ...result,
     content: JSON.stringify(result),
   });
+
+  // Auto-dismiss grants that score very low — likely non-grant content
+  // or completely misaligned. Visible in History with "Reconsider" option.
+  if (result.alignmentScore < 15) {
+    await ctx.runMutation(internal.grants.autoDismissGrant, {
+      grantId,
+      reason: `Auto-dismissed: low alignment score (${result.alignmentScore}/100)`,
+    });
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -213,17 +222,57 @@ export const generateDraft = action({
     if (!context) throw new Error("Grant not found");
     const { grant, profile, analysis } = context;
 
+    // Resolve all profile fields with sensible PSP defaults
+    const p = profile as Record<string, unknown> | null;
+    const orgName = (p?.name as string | undefined) ?? "Public Servants' Prayer Inc";
+    const ein = (p?.ein as string | undefined) ?? "82-2232515";
+    const website = (p?.website as string | undefined) ?? "https://thepsp.org";
+    const contactName = (p?.contactName as string | undefined)?.trim() || "Matt Barnes";
+    const contactEmail = (p?.contactEmail as string | undefined) ?? "";
+    const foundedYear = (p?.foundedYear as number | undefined) ?? 2004;
+    const mission = (p?.mission as string | undefined) ??
+      "We provide prayer and pastoral care in the political arena.";
+    const programs = (p?.primaryPrograms as string | undefined) ??
+      "Weekly Bible studies, prayer times, discipleship, chaplaincy services, Statehouse Prayer Services";
+
+    const fundingNeed = analysis?.recommendedFundingNeed ?? "general operations";
+    const grantMin = grant.amountMin as number | undefined;
+    const grantMax = grant.amountMax as number | undefined;
+
+    // Budget caps per funding need
+    const NEED_BUDGETS: Record<string, number> = {
+      "Women's Ministry": 100_000,
+      "Project 1816": 100_000,
+      "Website Growth and Maintenance": 40_000,
+      "Internships": 20_000,
+      "general operations": 300_000,
+    };
+    const needBudget = NEED_BUDGETS[fundingNeed] ?? 300_000;
+    const grantCap = grantMax ?? needBudget;
+    const askAmount = Math.min(needBudget, grantCap);
+    const askFmt = askAmount.toLocaleString("en-US", {
+      style: "currency",
+      currency: "USD",
+      maximumFractionDigits: 0,
+    });
+
+    const grantRangeFmt = fmtAmount(grantMin, grantMax);
+
+    const multiYearNote =
+      grantMax && grantMax >= 50_000
+        ? "If the funder offers multi-year support, propose a 2-3 year plan with annual milestones and year-by-year budget breakdowns."
+        : "Request a single-year grant.";
+
     const analysisSection = analysis
       ? `## Prior AI Analysis
 - Alignment Score: ${analysis.alignmentScore ?? "N/A"}/100
-- Recommended Funding Need: ${analysis.recommendedFundingNeed ?? "general operations"}
-- Summary: ${analysis.summary ?? ""}
-- Suggested Approach: ${analysis.suggestedApproach ?? ""}`
+- Best program match: ${fundingNeed}
+- Suggested approach: ${analysis.suggestedApproach ?? ""}`
       : "";
 
-    const prompt = `You are a grant writing assistant for a nonprofit organization.
+    const prompt = `You are a grant writing expert helping ${orgName} apply for funding.
 
-${orgBlock(profile as Record<string, unknown> | null)}
+${orgBlock(p)}
 
 ${PSP_CONTEXT}
 
@@ -231,20 +280,37 @@ ${grantBlock(grant as Record<string, unknown>)}
 
 ${analysisSection}
 
-## Instructions
-Write a compelling Letter of Intent (LOI) or grant application letter for this opportunity.
+## Draft Instructions
 
-The letter should:
-1. Be addressed appropriately (use "Dear Selection Committee" if no specific contact is known)
-2. Open with a compelling statement of need aligned with the organization's mission
-3. Describe the specific program that best matches this grant (${analysis?.recommendedFundingNeed ?? "general operations"})
-4. Include specific program details, expected outcomes, and budget information
-5. Reference the organization's track record and existing funder relationships where relevant
-6. Close with a clear, specific ask and next steps
-7. Be professional, faith-appropriate, and non-partisan in tone
-8. Be approximately 500-800 words
+Write a compelling Letter of Intent (LOI) for the grant above.
 
-Write the complete letter, ready to submit with minimal editing. Do not include any commentary before or after the letter.`;
+**Ask amount:** ${askFmt} (grant range: ${grantRangeFmt})
+- Do NOT ask for more than ${askFmt} — this is the lesser of the grant's stated maximum and the program budget
+- Scale the project scope, staffing, and deliverables to fit this ask amount
+- ${multiYearNote}
+
+**Primary program focus:** ${fundingNeed}
+- Center the letter on this specific program
+- Include concrete deliverables, measurable outcomes, and a concise budget breakdown
+
+**Tone and format:**
+1. Address: "Dear [Foundation Name] Selection Committee,"
+2. Opening paragraph: compelling statement of need + mission
+3. Program description: specific activities, participants served, outcomes
+4. Budget paragraph: request amount, how it will be used, line items if appropriate
+5. Track record paragraph: mention prior grant relationships (NCF, Indiana Christian Foundation, Jackson Family Foundation) as appropriate
+6. Closing: specific ask, timeline, next steps, offer to provide additional information
+7. Sign-off:
+   ${orgName}
+   Founded: ${foundedYear} | EIN: ${ein}
+   ${website}
+   Contact: ${contactName}${contactEmail ? ` | ${contactEmail}` : ""}
+
+Requirements:
+- Professional, faith-appropriate, non-partisan tone
+- Approximately 500-800 words
+- No blank fields — use the defaults above for any missing info
+- Write the complete letter only, with no commentary before or after`;
 
     let draftContent = "Draft generation failed — please try again.";
 

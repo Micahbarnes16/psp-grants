@@ -1,15 +1,35 @@
 import { query, mutation, internalQuery, internalMutation } from "./_generated/server";
+import type { QueryCtx } from "./_generated/server";
 import { v } from "convex/values";
 import { Doc, Id } from "./_generated/dataModel";
 import { requireAllowedUser } from "./lib/auth";
 
 // ---------------------------------------------------------------------------
-// Inbox list — pending_analysis + under_review, sorted deadline-asc
+// Shared helper: fetch all analysis scores as a grantId → score map
+// ---------------------------------------------------------------------------
+async function buildScoreMap(
+  ctx: QueryCtx
+): Promise<Record<string, number | undefined>> {
+  const analyses = await ctx.db.query("analysis").take(500);
+  const map: Record<string, number | undefined> = {};
+  for (const a of analyses) {
+    map[a.grantId as string] = a.alignmentScore;
+  }
+  return map;
+}
+
+// ---------------------------------------------------------------------------
+// Inbox list — actionable grants only:
+//   • acceptsUnsolicited is "yes" or "unknown" (invite-only → Watchlist)
+//   • deadline is in the future or not set (expired → excluded)
+//   • alignment score > 20 or not yet analyzed (noise filtered out)
+// Sorted deadline ascending.
 // ---------------------------------------------------------------------------
 export const listInbox = query({
   args: {},
   handler: async (ctx) => {
     await requireAllowedUser(ctx);
+    const now = Date.now();
 
     const pending = await ctx.db
       .query("grants")
@@ -21,20 +41,19 @@ export const listInbox = query({
       .withIndex("by_status", (q) => q.eq("status", "under_review"))
       .take(200);
 
-    // Catch legacy records inserted before `status` was enforced by the schema.
-    // Index scans can't match undefined, so we do a full scan filtered in JS.
-    const allGrants = await ctx.db.query("grants").collect();
-    const noStatus = allGrants.filter(
-      (g) => (g as { status?: string }).status === undefined
-    );
+    const scoreMap = await buildScoreMap(ctx);
 
-    const all: Doc<"grants">[] = [...pending, ...underReview, ...noStatus];
+    const all = [...pending, ...underReview].filter((g) => {
+      if (g.acceptsUnsolicited === "no") return false;
+      if (g.deadline !== undefined && g.deadline < now) return false;
+      const score = scoreMap[g._id as string];
+      if (score !== undefined && score <= 20) return false;
+      return true;
+    });
 
-    // Sort: deadline ascending; no deadline at the bottom
     all.sort((a, b) => {
-      if (a.deadline !== undefined && b.deadline !== undefined) {
+      if (a.deadline !== undefined && b.deadline !== undefined)
         return a.deadline - b.deadline;
-      }
       if (a.deadline !== undefined) return -1;
       if (b.deadline !== undefined) return 1;
       return a._creationTime - b._creationTime;
@@ -45,9 +64,66 @@ export const listInbox = query({
 });
 
 // ---------------------------------------------------------------------------
-// Inbox count for sidebar badge
+// Inbox count for sidebar badge — mirrors listInbox filters
 // ---------------------------------------------------------------------------
 export const getInboxCount = query({
+  args: {},
+  handler: async (ctx) => {
+    await requireAllowedUser(ctx);
+    const now = Date.now();
+
+    const pending = await ctx.db
+      .query("grants")
+      .withIndex("by_status", (q) => q.eq("status", "pending_analysis"))
+      .take(500);
+
+    const underReview = await ctx.db
+      .query("grants")
+      .withIndex("by_status", (q) => q.eq("status", "under_review"))
+      .take(500);
+
+    const scoreMap = await buildScoreMap(ctx);
+
+    return [...pending, ...underReview].filter((g) => {
+      if (g.acceptsUnsolicited === "no") return false;
+      if (g.deadline !== undefined && g.deadline < now) return false;
+      const score = scoreMap[g._id as string];
+      if (score !== undefined && score <= 20) return false;
+      return true;
+    }).length;
+  },
+});
+
+// ---------------------------------------------------------------------------
+// Watchlist — invite-only / relationship-required grants worth monitoring
+// ---------------------------------------------------------------------------
+export const listWatchlist = query({
+  args: {},
+  handler: async (ctx) => {
+    await requireAllowedUser(ctx);
+
+    const pending = await ctx.db
+      .query("grants")
+      .withIndex("by_status", (q) => q.eq("status", "pending_analysis"))
+      .take(200);
+
+    const underReview = await ctx.db
+      .query("grants")
+      .withIndex("by_status", (q) => q.eq("status", "under_review"))
+      .take(200);
+
+    const scoreMap = await buildScoreMap(ctx);
+
+    return [...pending, ...underReview]
+      .filter((g) => g.acceptsUnsolicited === "no")
+      .sort(
+        (a, b) =>
+          (scoreMap[b._id as string] ?? 0) - (scoreMap[a._id as string] ?? 0)
+      );
+  },
+});
+
+export const getWatchlistCount = query({
   args: {},
   handler: async (ctx) => {
     await requireAllowedUser(ctx);
@@ -62,7 +138,9 @@ export const getInboxCount = query({
       .withIndex("by_status", (q) => q.eq("status", "under_review"))
       .take(500);
 
-    return pending.length + underReview.length;
+    return [...pending, ...underReview].filter(
+      (g) => g.acceptsUnsolicited === "no"
+    ).length;
   },
 });
 
@@ -119,6 +197,18 @@ export const approve = mutation({
     const grant = await ctx.db.get(grantId);
     if (!grant) throw new Error("Grant not found");
     await ctx.db.patch(grantId, { status: "approved" });
+  },
+});
+
+// Move a watchlist grant back into the actionable inbox by marking it
+// as accepting unsolicited applications (e.g. PSP has made contact).
+export const markAccessible = mutation({
+  args: { grantId: v.id("grants") },
+  handler: async (ctx, { grantId }) => {
+    await requireAllowedUser(ctx);
+    const grant = await ctx.db.get(grantId);
+    if (!grant) throw new Error("Grant not found");
+    await ctx.db.patch(grantId, { acceptsUnsolicited: "yes" });
   },
 });
 
@@ -372,6 +462,23 @@ export const storeDraftContent = internalMutation({
         content: "",
         draftContent,
       });
+    }
+  },
+});
+
+// Auto-dismiss a grant after AI analysis scores it very low.
+// Only dismisses if the grant is still in an inbox status — does not
+// override user decisions (approved, submitted, etc.).
+export const autoDismissGrant = internalMutation({
+  args: { grantId: v.id("grants"), reason: v.string() },
+  handler: async (ctx, { grantId, reason }) => {
+    const grant = await ctx.db.get(grantId);
+    if (!grant) return;
+    if (
+      grant.status === "pending_analysis" ||
+      grant.status === "under_review"
+    ) {
+      await ctx.db.patch(grantId, { status: "dismissed", dismissReason: reason });
     }
   },
 });
