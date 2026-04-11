@@ -98,8 +98,9 @@ async function fetchStateLegislators(
   let page = 1;
 
   while (true) {
-    // Omit include=other_names — it adds server-side processing and can cause 504s
-    const url = `https://v3.openstates.org/people?jurisdiction=${state}&per_page=100&page=${page}`;
+    // per_page max is 50 in Open States v3 REST API
+    const url = `https://v3.openstates.org/people?jurisdiction=${state}&per_page=50&page=${page}`;
+    console.log(`[OpenStates] fetching: ${url}`);
     const data = await fetchPage(url, apiKey);
     all.push(...data.results);
 
