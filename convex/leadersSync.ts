@@ -224,6 +224,7 @@ export const syncState = action({
   },
 });
 
+
 /**
  * Kick off a chained sync of all 50 states, one at a time.
  * Each state schedules the next when it finishes — no overlap, no contention.
