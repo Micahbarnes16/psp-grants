@@ -151,4 +151,52 @@ export default defineSchema({
     error: v.optional(v.string()),
   })
     .index("by_source", ["source"]),
+
+  leaders: defineTable({
+    externalId: v.string(),
+    firstName: v.string(),
+    lastName: v.string(),
+    fullName: v.string(),
+    state: v.string(),
+    chamber: v.string(),
+    district: v.optional(v.string()),
+    party: v.optional(v.string()),
+    title: v.optional(v.string()),
+    photoUrl: v.optional(v.string()),
+    email: v.optional(v.string()),
+    phone: v.optional(v.string()),
+    website: v.optional(v.string()),
+    birthday: v.optional(v.string()),
+    birthplace: v.optional(v.string()),
+    spouse: v.optional(v.string()),
+    children: v.optional(v.string()),
+    bio: v.optional(v.string()),
+    level: v.string(),
+    branch: v.string(),
+    inOffice: v.boolean(),
+    lastSyncedAt: v.number(),
+    lastVerifiedAt: v.optional(v.number()),
+    firestoreDocId: v.optional(v.string()),
+  })
+    .index("by_state", ["state"])
+    .index("by_external_id", ["externalId"])
+    .index("by_state_and_chamber", ["state", "chamber"])
+    .index("by_state_and_branch", ["state", "branch"]),
+
+  leader_changes: defineTable({
+    leaderId: v.id("leaders"),
+    field: v.string(),
+    oldValue: v.optional(v.string()),
+    newValue: v.string(),
+    source: v.string(),
+    sourceUrl: v.optional(v.string()),
+    confidence: v.string(),
+    status: v.string(),
+    reviewedAt: v.optional(v.number()),
+    reviewedBy: v.optional(v.string()),
+    detectedAt: v.number(),
+  })
+    .index("by_status", ["status"])
+    .index("by_leader", ["leaderId"])
+    .index("by_leader_and_status", ["leaderId", "status"]),
 });

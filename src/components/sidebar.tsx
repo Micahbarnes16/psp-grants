@@ -5,6 +5,34 @@ import { usePathname } from "next/navigation";
 import { useQuery, useConvexAuth } from "convex/react";
 import { api } from "@convex/_generated/api";
 
+function LeadersTotalBadge() {
+  const { isAuthenticated } = useConvexAuth();
+  const count = useQuery(
+    api.leaders.getLeaderCount,
+    isAuthenticated ? {} : "skip"
+  );
+  if (!count) return null;
+  return (
+    <span className="ml-auto rounded-full bg-gray-100 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-gray-600 dark:bg-gray-700 dark:text-gray-300">
+      {count > 9999 ? "9999+" : count}
+    </span>
+  );
+}
+
+function LeadersPendingBadge() {
+  const { isAuthenticated } = useConvexAuth();
+  const count = useQuery(
+    api.leaders.getPendingChangesCount,
+    isAuthenticated ? {} : "skip"
+  );
+  if (!count) return null;
+  return (
+    <span className="ml-auto rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
+      {count > 99 ? "99+" : count}
+    </span>
+  );
+}
+
 function InboxBadge() {
   const { isAuthenticated } = useConvexAuth();
   const count = useQuery(api.grants.getInboxCount, isAuthenticated ? {} : "skip");
@@ -87,6 +115,38 @@ const navItems = [
   },
 ];
 
+const leaderItems = [
+  {
+    label: "Dashboard",
+    href: "/leaders",
+    badge: <LeadersTotalBadge />,
+    icon: (
+      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M17.982 18.725A7.488 7.488 0 0 0 12 15.75a7.488 7.488 0 0 0-5.982 2.975m11.963 0a9 9 0 1 0-11.963 0m11.963 0A8.966 8.966 0 0 1 12 21a8.966 8.966 0 0 1-5.982-2.275M15 9.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+      </svg>
+    ),
+  },
+  {
+    label: "Pending Changes",
+    href: "/leaders/changes",
+    badge: <LeadersPendingBadge />,
+    icon: (
+      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+      </svg>
+    ),
+  },
+  {
+    label: "States",
+    href: "/leaders/states",
+    icon: (
+      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498 4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 0 0-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0Z" />
+      </svg>
+    ),
+  },
+];
+
 const bottomItems = [
   {
     label: "Settings",
@@ -129,32 +189,71 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
       {/* Nav */}
       <nav className="flex flex-1 flex-col justify-between overflow-y-auto px-3 py-4">
-        <ul className="space-y-0.5">
-          {navItems.map((item) => {
-            const isActive =
-              pathname === item.href ||
-              (item.href === "/inbox" && pathname.startsWith("/inbox/"));
-            return (
-              <li key={item.href}>
-                <Link
-                  href={item.href}
-                  onClick={onClose}
-                  className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                    isActive
-                      ? "bg-gray-100 text-gray-900 dark:bg-gray-700 dark:text-gray-100"
-                      : "text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-100"
-                  }`}
-                >
-                  <span className={isActive ? "text-gray-700 dark:text-gray-300" : "text-gray-400 dark:text-gray-500"}>
-                    {item.icon}
-                  </span>
-                  {item.label}
-                  {"badge" in item && item.badge}
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
+        <div className="space-y-4">
+          {/* Grants section */}
+          <ul className="space-y-0.5">
+            {navItems.map((item) => {
+              const isActive =
+                pathname === item.href ||
+                (item.href === "/inbox" && pathname.startsWith("/inbox/"));
+              return (
+                <li key={item.href}>
+                  <Link
+                    href={item.href}
+                    onClick={onClose}
+                    className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                      isActive
+                        ? "bg-gray-100 text-gray-900 dark:bg-gray-700 dark:text-gray-100"
+                        : "text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-100"
+                    }`}
+                  >
+                    <span className={isActive ? "text-gray-700 dark:text-gray-300" : "text-gray-400 dark:text-gray-500"}>
+                      {item.icon}
+                    </span>
+                    {item.label}
+                    {"badge" in item && item.badge}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+
+          {/* Divider */}
+          <div className="border-t border-gray-200 dark:border-gray-700" />
+
+          {/* Leaders section */}
+          <div>
+            <p className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+              Leaders
+            </p>
+            <ul className="space-y-0.5">
+              {leaderItems.map((item) => {
+                const isActive =
+                  pathname === item.href ||
+                  pathname.startsWith(item.href + "/");
+                return (
+                  <li key={item.href}>
+                    <Link
+                      href={item.href}
+                      onClick={onClose}
+                      className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                        isActive
+                          ? "bg-gray-100 text-gray-900 dark:bg-gray-700 dark:text-gray-100"
+                          : "text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-100"
+                      }`}
+                    >
+                      <span className={isActive ? "text-gray-700 dark:text-gray-300" : "text-gray-400 dark:text-gray-500"}>
+                        {item.icon}
+                      </span>
+                      {item.label}
+                      {"badge" in item && item.badge}
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        </div>
 
         <ul className="space-y-0.5">
           {bottomItems.map((item) => {

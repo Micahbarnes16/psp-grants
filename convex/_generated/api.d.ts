@@ -12,6 +12,8 @@ import type * as ai from "../ai.js";
 import type * as crons from "../crons.js";
 import type * as funders from "../funders.js";
 import type * as grants from "../grants.js";
+import type * as leaders from "../leaders.js";
+import type * as leadersSync from "../leadersSync.js";
 import type * as lib_auth from "../lib/auth.js";
 import type * as psp from "../psp.js";
 import type * as scrapers_chatlos from "../scrapers/chatlos.js";
@@ -38,6 +40,8 @@ declare const fullApi: ApiFromModules<{
   crons: typeof crons;
   funders: typeof funders;
   grants: typeof grants;
+  leaders: typeof leaders;
+  leadersSync: typeof leadersSync;
   "lib/auth": typeof lib_auth;
   psp: typeof psp;
   "scrapers/chatlos": typeof scrapers_chatlos;
