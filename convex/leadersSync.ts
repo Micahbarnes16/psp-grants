@@ -166,7 +166,8 @@ async function syncStateImpl(
 }
 
 // ---------------------------------------------------------------------------
-// Internal action — syncs the first state in the list, then chains to the next
+// Internal action — syncs the first state in the list, then chains to the next.
+// Errors are caught and logged so one bad state never breaks the whole chain.
 // ---------------------------------------------------------------------------
 export const syncNextState = internalAction({
   args: { remainingStates: v.array(v.string()) },
@@ -178,8 +179,16 @@ export const syncNextState = internalAction({
     if (!apiKey) throw new Error("OPENSTATES_API_KEY not set");
 
     console.log(`[syncNextState] syncing ${current} (${rest.length} remaining after this)`);
-    const result = await syncStateImpl(ctx, current, apiKey);
-    console.log(`[syncNextState] done ${current}:`, JSON.stringify(result));
+    try {
+      const result = await syncStateImpl(ctx, current, apiKey);
+      console.log(`[syncNextState] done ${current}:`, JSON.stringify(result));
+    } catch (err) {
+      console.error(
+        `[syncNextState] FAILED ${current}:`,
+        err instanceof Error ? err.message : String(err)
+      );
+      // Continue the chain even on failure — don't let one state block the rest
+    }
 
     if (rest.length > 0) {
       await ctx.scheduler.runAfter(0, internal.leadersSync.syncNextState, {
@@ -223,5 +232,29 @@ export const syncAllStates = action({
 
     console.log(`[syncAllStates] chain started — ${ALL_STATES.length} states will run sequentially`);
     return { scheduled: ALL_STATES.length };
+  },
+});
+
+/**
+ * Resume the chain from a specific state code (e.g. "ma" to restart from Massachusetts).
+ * Useful after a chain failure to pick up where it left off without re-syncing
+ * already-complete states.
+ */
+export const resumeFrom = action({
+  args: { fromState: v.string() },
+  handler: async (ctx, args) => {
+    await requireAllowedUser(ctx);
+    if (!process.env.OPENSTATES_API_KEY) throw new Error("OPENSTATES_API_KEY not set");
+
+    const idx = ALL_STATES.indexOf(args.fromState.toLowerCase());
+    if (idx === -1) throw new Error(`Unknown state code: ${args.fromState}`);
+
+    const remaining = ALL_STATES.slice(idx);
+    await ctx.scheduler.runAfter(0, internal.leadersSync.syncNextState, {
+      remainingStates: remaining,
+    });
+
+    console.log(`[resumeFrom] chain restarted from ${args.fromState} — ${remaining.length} states queued`);
+    return { scheduled: remaining.length, startingFrom: args.fromState };
   },
 });
