@@ -18,8 +18,6 @@ const ALL_STATES = [
 ];
 
 const BATCH_SIZE = 25;
-// 5 seconds between states — keeps us well under Open States rate limits
-const STATE_STAGGER_MS = 5000;
 
 // ---------------------------------------------------------------------------
 // Open States v3 REST API types
@@ -168,17 +166,28 @@ async function syncStateImpl(
 }
 
 // ---------------------------------------------------------------------------
-// Internal action — runs one state sync, called by the scheduler (no auth)
+// Internal action — syncs the first state in the list, then chains to the next
 // ---------------------------------------------------------------------------
-export const syncStateInternal = internalAction({
-  args: { state: v.string() },
+export const syncNextState = internalAction({
+  args: { remainingStates: v.array(v.string()) },
   handler: async (ctx, args) => {
+    const [current, ...rest] = args.remainingStates;
+    if (!current) return;
+
     const apiKey = process.env.OPENSTATES_API_KEY;
     if (!apiKey) throw new Error("OPENSTATES_API_KEY not set");
-    console.log(`[syncStateInternal] starting ${args.state}`);
-    const result = await syncStateImpl(ctx, args.state, apiKey);
-    console.log(`[syncStateInternal] done ${args.state}:`, JSON.stringify(result));
-    return result;
+
+    console.log(`[syncNextState] syncing ${current} (${rest.length} remaining after this)`);
+    const result = await syncStateImpl(ctx, current, apiKey);
+    console.log(`[syncNextState] done ${current}:`, JSON.stringify(result));
+
+    if (rest.length > 0) {
+      await ctx.scheduler.runAfter(0, internal.leadersSync.syncNextState, {
+        remainingStates: rest,
+      });
+    } else {
+      console.log("[syncNextState] all states complete");
+    }
   },
 });
 
@@ -198,9 +207,9 @@ export const syncState = action({
 });
 
 /**
- * Schedule all 50 states as independent actions staggered 5 s apart.
- * Returns immediately — each state runs in its own action within its own
- * 10-minute window, so this will never time out.
+ * Kick off a chained sync of all 50 states, one at a time.
+ * Each state schedules the next when it finishes — no overlap, no contention.
+ * Returns immediately; the chain runs entirely in the background.
  */
 export const syncAllStates = action({
   args: {},
@@ -208,16 +217,11 @@ export const syncAllStates = action({
     await requireAllowedUser(ctx);
     if (!process.env.OPENSTATES_API_KEY) throw new Error("OPENSTATES_API_KEY not set");
 
-    for (let i = 0; i < ALL_STATES.length; i++) {
-      await ctx.scheduler.runAfter(
-        i * STATE_STAGGER_MS,
-        internal.leadersSync.syncStateInternal,
-        { state: ALL_STATES[i] }
-      );
-    }
+    await ctx.scheduler.runAfter(0, internal.leadersSync.syncNextState, {
+      remainingStates: ALL_STATES,
+    });
 
-    const totalDurationMin = Math.ceil((ALL_STATES.length * STATE_STAGGER_MS) / 60000);
-    console.log(`[syncAllStates] scheduled ${ALL_STATES.length} states, last fires in ~${totalDurationMin} min`);
-    return { scheduled: ALL_STATES.length, estimatedMinutes: totalDurationMin };
+    console.log(`[syncAllStates] chain started — ${ALL_STATES.length} states will run sequentially`);
+    return { scheduled: ALL_STATES.length };
   },
 });

@@ -162,7 +162,7 @@ export default function LeadersDashboardPage() {
     try {
       const result = await syncAllStates({});
       setAllResult(
-        `Scheduled ${result.scheduled} state syncs — all states will finish in ~${result.estimatedMinutes} min`
+        `Chain started — ${result.scheduled} states will sync sequentially in the background`
       );
     } catch (err) {
       setAllResult(`Error: ${err instanceof Error ? err.message : "failed"}`);
@@ -321,7 +321,7 @@ export default function LeadersDashboardPage() {
             Sync All States
           </h3>
           <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">
-            Schedules all 50 states as independent background syncs staggered 5s apart. Returns immediately — syncs run in the background over ~4 min.
+            Runs all 50 states sequentially — each state schedules the next when it finishes. Returns immediately; the chain runs entirely in the background.
           </p>
           <div className="mt-4">
             <button
