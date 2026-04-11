@@ -55,6 +55,39 @@ interface OpenStatesResponse {
 }
 
 // ---------------------------------------------------------------------------
+// Fetch one page with up to 3 retries on 5xx / network errors
+// ---------------------------------------------------------------------------
+async function fetchPage(
+  url: string,
+  apiKey: string,
+  retries = 3
+): Promise<OpenStatesResponse> {
+  let lastErr: unknown;
+  for (let attempt = 0; attempt < retries; attempt++) {
+    if (attempt > 0) {
+      // Exponential backoff: 2s, 4s
+      await new Promise((r) => setTimeout(r, 1000 * Math.pow(2, attempt)));
+    }
+    let res: Response;
+    try {
+      res = await fetch(url, { headers: { "X-API-KEY": apiKey } });
+    } catch (err) {
+      lastErr = err;
+      continue;
+    }
+    if (res.ok) {
+      return res.json() as Promise<OpenStatesResponse>;
+    }
+    // 4xx (except 429) → not retryable
+    if (res.status >= 400 && res.status < 500 && res.status !== 429) {
+      throw new Error(`Open States API error: ${res.status} ${res.statusText}`);
+    }
+    lastErr = new Error(`Open States API error: ${res.status} ${res.statusText}`);
+  }
+  throw lastErr;
+}
+
+// ---------------------------------------------------------------------------
 // Fetch all legislators for a state from Open States v3 REST API
 // ---------------------------------------------------------------------------
 async function fetchStateLegislators(
@@ -65,18 +98,9 @@ async function fetchStateLegislators(
   let page = 1;
 
   while (true) {
-    const url = `https://v3.openstates.org/people?jurisdiction=${state}&include=other_names&per_page=100&page=${page}`;
-    const res = await fetch(url, {
-      headers: { "X-API-KEY": apiKey },
-    });
-
-    if (!res.ok) {
-      throw new Error(
-        `Open States API error for ${state}: ${res.status} ${res.statusText}`
-      );
-    }
-
-    const data: OpenStatesResponse = await res.json();
+    // Omit include=other_names — it adds server-side processing and can cause 504s
+    const url = `https://v3.openstates.org/people?jurisdiction=${state}&per_page=100&page=${page}`;
+    const data = await fetchPage(url, apiKey);
     all.push(...data.results);
 
     if (page >= data.pagination.max_page || data.results.length === 0) {
