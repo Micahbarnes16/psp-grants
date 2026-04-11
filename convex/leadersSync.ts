@@ -1,9 +1,9 @@
 "use node";
 
-import { action } from "./_generated/server";
+import { action, internalAction } from "./_generated/server";
 import type { ActionCtx } from "./_generated/server";
 import { v } from "convex/values";
-import { internal } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 import { requireAllowedUser } from "./lib/auth";
 
 // ---------------------------------------------------------------------------
@@ -18,6 +18,8 @@ const ALL_STATES = [
 ];
 
 const BATCH_SIZE = 25;
+// 5 seconds between states — keeps us well under Open States rate limits
+const STATE_STAGGER_MS = 5000;
 
 // ---------------------------------------------------------------------------
 // Open States v3 REST API types
@@ -55,7 +57,7 @@ interface OpenStatesResponse {
 }
 
 // ---------------------------------------------------------------------------
-// Fetch one page with up to 3 retries on 5xx / network errors
+// Fetch one page with up to 3 retries on 5xx / rate-limit errors
 // ---------------------------------------------------------------------------
 async function fetchPage(
   url: string,
@@ -65,7 +67,6 @@ async function fetchPage(
   let lastErr: unknown;
   for (let attempt = 0; attempt < retries; attempt++) {
     if (attempt > 0) {
-      // Exponential backoff: 2s, 4s
       await new Promise((r) => setTimeout(r, 1000 * Math.pow(2, attempt)));
     }
     let res: Response;
@@ -78,7 +79,7 @@ async function fetchPage(
     if (res.ok) {
       return res.json() as Promise<OpenStatesResponse>;
     }
-    // 4xx (except 429) → not retryable
+    // Hard-fail on 4xx (except 429 rate limit)
     if (res.status >= 400 && res.status < 500 && res.status !== 429) {
       throw new Error(`Open States API error: ${res.status} ${res.statusText}`);
     }
@@ -88,7 +89,7 @@ async function fetchPage(
 }
 
 // ---------------------------------------------------------------------------
-// Fetch all legislators for a state from Open States v3 REST API
+// Fetch all pages for a state
 // ---------------------------------------------------------------------------
 async function fetchStateLegislators(
   state: string,
@@ -98,15 +99,12 @@ async function fetchStateLegislators(
   let page = 1;
 
   while (true) {
-    // per_page max is 50 in Open States v3 REST API
     const url = `https://v3.openstates.org/people?jurisdiction=${state}&per_page=50&page=${page}`;
     console.log(`[OpenStates] fetching: ${url}`);
     const data = await fetchPage(url, apiKey);
     all.push(...data.results);
 
-    if (page >= data.pagination.max_page || data.results.length === 0) {
-      break;
-    }
+    if (page >= data.pagination.max_page || data.results.length === 0) break;
     page++;
   }
 
@@ -120,8 +118,7 @@ function personToLeaderData(person: OpenStatesPerson, state: string) {
   return {
     externalId: person.id,
     firstName: person.given_name || person.name.split(" ")[0] || "",
-    lastName:
-      person.family_name || person.name.split(" ").slice(1).join(" ") || "",
+    lastName: person.family_name || person.name.split(" ").slice(1).join(" ") || "",
     fullName: person.name,
     state: state.toLowerCase(),
     chamber,
@@ -140,7 +137,7 @@ function personToLeaderData(person: OpenStatesPerson, state: string) {
 }
 
 // ---------------------------------------------------------------------------
-// Core sync logic — shared between syncState and syncAllStates
+// Core sync logic — fetches + upserts one state
 // ---------------------------------------------------------------------------
 async function syncStateImpl(
   ctx: ActionCtx,
@@ -167,18 +164,29 @@ async function syncStateImpl(
     totalUnchanged += result.unchanged;
   }
 
-  return {
-    total: people.length,
-    new: totalNew,
-    updated: totalUpdated,
-    unchanged: totalUnchanged,
-  };
+  return { total: people.length, new: totalNew, updated: totalUpdated, unchanged: totalUnchanged };
 }
 
 // ---------------------------------------------------------------------------
-// Public actions
+// Internal action — runs one state sync, called by the scheduler (no auth)
+// ---------------------------------------------------------------------------
+export const syncStateInternal = internalAction({
+  args: { state: v.string() },
+  handler: async (ctx, args) => {
+    const apiKey = process.env.OPENSTATES_API_KEY;
+    if (!apiKey) throw new Error("OPENSTATES_API_KEY not set");
+    console.log(`[syncStateInternal] starting ${args.state}`);
+    const result = await syncStateImpl(ctx, args.state, apiKey);
+    console.log(`[syncStateInternal] done ${args.state}:`, JSON.stringify(result));
+    return result;
+  },
+});
+
+// ---------------------------------------------------------------------------
+// Public actions — called from the UI
 // ---------------------------------------------------------------------------
 
+/** Sync a single state immediately. Called from the Leaders dashboard. */
 export const syncState = action({
   args: { state: v.string() },
   handler: async (ctx, args) => {
@@ -189,41 +197,27 @@ export const syncState = action({
   },
 });
 
+/**
+ * Schedule all 50 states as independent actions staggered 5 s apart.
+ * Returns immediately — each state runs in its own action within its own
+ * 10-minute window, so this will never time out.
+ */
 export const syncAllStates = action({
   args: {},
   handler: async (ctx) => {
     await requireAllowedUser(ctx);
-    const apiKey = process.env.OPENSTATES_API_KEY;
-    if (!apiKey) throw new Error("OPENSTATES_API_KEY not set");
+    if (!process.env.OPENSTATES_API_KEY) throw new Error("OPENSTATES_API_KEY not set");
 
-    const results: Array<{
-      state: string;
-      total: number;
-      new: number;
-      updated: number;
-      unchanged: number;
-      error?: string;
-    }> = [];
-
-    for (const state of ALL_STATES) {
-      try {
-        const result = await syncStateImpl(ctx, state, apiKey);
-        results.push({ state, ...result });
-      } catch (err) {
-        console.error(`Failed to sync state ${state}:`, err);
-        results.push({
-          state,
-          total: 0,
-          new: 0,
-          updated: 0,
-          unchanged: 0,
-          error: err instanceof Error ? err.message : "Unknown error",
-        });
-      }
-      // Delay between states to respect rate limits
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+    for (let i = 0; i < ALL_STATES.length; i++) {
+      await ctx.scheduler.runAfter(
+        i * STATE_STAGGER_MS,
+        internal.leadersSync.syncStateInternal,
+        { state: ALL_STATES[i] }
+      );
     }
 
-    return results;
+    const totalDurationMin = Math.ceil((ALL_STATES.length * STATE_STAGGER_MS) / 60000);
+    console.log(`[syncAllStates] scheduled ${ALL_STATES.length} states, last fires in ~${totalDurationMin} min`);
+    return { scheduled: ALL_STATES.length, estimatedMinutes: totalDurationMin };
   },
 });

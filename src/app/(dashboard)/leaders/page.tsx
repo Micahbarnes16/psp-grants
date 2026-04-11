@@ -160,12 +160,9 @@ export default function LeadersDashboardPage() {
     setSyncingAll(true);
     setAllResult(null);
     try {
-      const results = await syncAllStates({});
-      const totalNew = results.reduce((sum, r) => sum + r.new, 0);
-      const totalUpdated = results.reduce((sum, r) => sum + r.updated, 0);
-      const errors = results.filter((r) => r.error).length;
+      const result = await syncAllStates({});
       setAllResult(
-        `Done — ${totalNew} new, ${totalUpdated} updated${errors > 0 ? `, ${errors} states failed` : ""}`
+        `Scheduled ${result.scheduled} state syncs — all states will finish in ~${result.estimatedMinutes} min`
       );
     } catch (err) {
       setAllResult(`Error: ${err instanceof Error ? err.message : "failed"}`);
@@ -324,8 +321,7 @@ export default function LeadersDashboardPage() {
             Sync All States
           </h3>
           <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">
-            Pull legislators for all 50 states. Takes several minutes due to
-            rate limiting (2s delay per state).
+            Schedules all 50 states as independent background syncs staggered 5s apart. Returns immediately — syncs run in the background over ~4 min.
           </p>
           <div className="mt-4">
             <button
@@ -333,7 +329,7 @@ export default function LeadersDashboardPage() {
               disabled={syncingState || syncingAll}
               className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
             >
-              {syncingAll ? "Syncing all states… (this takes ~2 min)" : "Sync All 50 States"}
+              {syncingAll ? "Scheduling…" : "Sync All 50 States"}
             </button>
           </div>
           {allResult && (
