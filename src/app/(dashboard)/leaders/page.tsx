@@ -121,10 +121,14 @@ export default function LeadersDashboardPage() {
 
   const syncState = useAction(api.leadersSync.syncState);
   const syncAllStates = useAction(api.leadersSync.syncAllStates);
+  const resumeFrom = useAction(api.leadersSync.resumeFrom);
 
   const [selectedState, setSelectedState] = useState("in");
   const [syncingState, setSyncingState] = useState(false);
   const [syncingAll, setSyncingAll] = useState(false);
+  const [resumeState, setResumeState] = useState("ma");
+  const [resuming, setResuming] = useState(false);
+  const [resumeResult, setResumeResult] = useState<string | null>(null);
 
   // Search state
   const [searchInput, setSearchInput] = useState("");
@@ -153,6 +157,21 @@ export default function LeadersDashboardPage() {
       setStateResult(`Error: ${err instanceof Error ? err.message : "failed"}`);
     } finally {
       setSyncingState(false);
+    }
+  }
+
+  async function handleResumeFrom() {
+    setResuming(true);
+    setResumeResult(null);
+    try {
+      const result = await resumeFrom({ fromState: resumeState });
+      setResumeResult(
+        `Resumed from ${result.startingFrom.toUpperCase()} — ${result.scheduled} states queued`
+      );
+    } catch (err) {
+      setResumeResult(`Error: ${err instanceof Error ? err.message : "failed"}`);
+    } finally {
+      setResuming(false);
     }
   }
 
@@ -341,6 +360,48 @@ export default function LeadersDashboardPage() {
               }`}
             >
               {allResult}
+            </p>
+          )}
+        </div>
+
+        {/* Resume from state */}
+        <div className="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+            Resume Chain From State
+          </h3>
+          <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">
+            If the chain stopped mid-way, resume from a specific state without re-syncing already-complete states.
+          </p>
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <select
+              value={resumeState}
+              onChange={(e) => setResumeState(e.target.value)}
+              className={selectCls}
+              disabled={resuming}
+            >
+              {ALL_STATES.map((s) => (
+                <option key={s.code} value={s.code}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+            <button
+              onClick={handleResumeFrom}
+              disabled={resuming || syncingAll || syncingState}
+              className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-800 hover:bg-amber-100 disabled:opacity-60 dark:border-amber-700 dark:bg-amber-900/20 dark:text-amber-300 dark:hover:bg-amber-900/40"
+            >
+              {resuming ? "Scheduling…" : "Resume From Here"}
+            </button>
+          </div>
+          {resumeResult && (
+            <p
+              className={`mt-3 text-sm font-medium ${
+                resumeResult.startsWith("Error")
+                  ? "text-red-600 dark:text-red-400"
+                  : "text-green-700 dark:text-green-400"
+              }`}
+            >
+              {resumeResult}
             </p>
           )}
         </div>
