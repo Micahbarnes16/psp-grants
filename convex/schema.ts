@@ -181,7 +181,11 @@ export default defineSchema({
     .index("by_state", ["state"])
     .index("by_external_id", ["externalId"])
     .index("by_state_and_chamber", ["state", "chamber"])
-    .index("by_state_and_branch", ["state", "branch"]),
+    .index("by_state_and_branch", ["state", "branch"])
+    .searchIndex("search_name", {
+      searchField: "fullName",
+      filterFields: ["state"],
+    }),
 
   leader_changes: defineTable({
     leaderId: v.id("leaders"),

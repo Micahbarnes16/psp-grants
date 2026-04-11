@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import Image from "next/image";
 import { useQuery, useAction, useConvexAuth } from "convex/react";
 import { api } from "@convex/_generated/api";
 
@@ -56,6 +58,52 @@ function StatCard({
   );
 }
 
+function SearchResultCard({ leader }: { leader: { _id: string; fullName: string; title?: string; party?: string; district?: string; chamber: string; state: string; photoUrl?: string } }) {
+  const [imgError, setImgError] = useState(false);
+  const lower = (leader.party ?? "").toLowerCase();
+  const partyColor = lower.includes("republican") || lower.includes("rep")
+    ? "bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300"
+    : lower.includes("democrat") || lower.includes("dem")
+      ? "bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
+      : "bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400";
+  const chamberLabel: Record<string, string> = { upper: "Senate", lower: "House", legislature: "Legislature" };
+
+  return (
+    <Link
+      href={`/leaders/states/${leader.state}/${leader._id}`}
+      className="flex items-center gap-3 rounded-xl border border-gray-200 bg-white p-3 transition-colors hover:border-gray-300 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:hover:border-gray-600 dark:hover:bg-gray-700"
+    >
+      <div className="shrink-0">
+        {leader.photoUrl && !imgError ? (
+          <div className="relative h-10 w-8 overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-700">
+            <Image src={leader.photoUrl} alt={leader.fullName} fill className="object-cover object-top" onError={() => setImgError(true)} sizes="32px" unoptimized />
+          </div>
+        ) : (
+          <div className="flex h-10 w-8 items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-700">
+            <svg className="h-5 w-5 text-gray-300 dark:text-gray-600" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M7.5 6a4.5 4.5 0 1 1 9 0 4.5 4.5 0 0 1-9 0ZM3.751 20.105a8.25 8.25 0 0 1 16.498 0 .75.75 0 0 1-.437.695A18.683 18.683 0 0 1 12 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 0 1-.437-.695Z" />
+            </svg>
+          </div>
+        )}
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-semibold text-gray-900 dark:text-gray-100">{leader.fullName}</p>
+        <p className="truncate text-xs text-gray-400 dark:text-gray-500">
+          {leader.title ?? chamberLabel[leader.chamber] ?? leader.chamber}
+          {leader.district ? ` · Dist. ${leader.district}` : ""}
+          {" · "}{leader.state.toUpperCase()}
+        </p>
+      </div>
+      {leader.party && (
+        <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${partyColor}`}>{leader.party}</span>
+      )}
+      <svg className="h-4 w-4 shrink-0 text-gray-300 dark:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+      </svg>
+    </Link>
+  );
+}
+
 export default function LeadersDashboardPage() {
   const { isAuthenticated } = useConvexAuth();
   const totalLeaders = useQuery(
@@ -77,6 +125,19 @@ export default function LeadersDashboardPage() {
   const [selectedState, setSelectedState] = useState("in");
   const [syncingState, setSyncingState] = useState(false);
   const [syncingAll, setSyncingAll] = useState(false);
+
+  // Search state
+  const [searchInput, setSearchInput] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+  useEffect(() => {
+    const t = setTimeout(() => setSearchTerm(searchInput), 300);
+    return () => clearTimeout(t);
+  }, [searchInput]);
+  const searchResults = useQuery(
+    api.leaders.searchLeaders,
+    isAuthenticated && searchTerm.trim() ? { searchTerm: searchTerm.trim() } : "skip"
+  );
+  const isSearching = searchTerm.trim().length > 0;
   const [stateResult, setStateResult] = useState<string | null>(null);
   const [allResult, setAllResult] = useState<string | null>(null);
 
@@ -128,7 +189,7 @@ export default function LeadersDashboardPage() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <div className="mb-6">
+      <div className="mb-5">
         <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
           Leaders
         </h2>
@@ -138,7 +199,63 @@ export default function LeadersDashboardPage() {
         </p>
       </div>
 
-      {/* Stats */}
+      {/* Global search */}
+      <div className="mb-6">
+        <div className="relative">
+          <svg className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 dark:text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+          </svg>
+          <input
+            type="text"
+            placeholder="Search all leaders by name…"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            className="w-full rounded-xl border border-gray-200 bg-white py-2.5 pl-9 pr-9 text-sm text-gray-900 placeholder:text-gray-400 focus:border-gray-400 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 dark:placeholder:text-gray-500"
+          />
+          {searchInput && (
+            <button
+              onClick={() => setSearchInput("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+            >
+              <svg className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" />
+              </svg>
+            </button>
+          )}
+        </div>
+
+        {/* Search results */}
+        {isSearching && (
+          <div className="mt-2">
+            {searchResults === undefined && (
+              <div className="space-y-2">
+                {[1, 2, 3].map((n) => (
+                  <div key={n} className="h-14 animate-pulse rounded-xl bg-gray-100 dark:bg-gray-800" />
+                ))}
+              </div>
+            )}
+            {searchResults !== undefined && searchResults.length === 0 && (
+              <p className="py-4 text-center text-sm text-gray-400 dark:text-gray-500">
+                No leaders found matching &ldquo;{searchTerm}&rdquo;
+              </p>
+            )}
+            {searchResults !== undefined && searchResults.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-xs text-gray-400 dark:text-gray-500">
+                  {searchResults.length} result{searchResults.length !== 1 ? "s" : ""}
+                </p>
+                {searchResults.map((l) => (
+                  <SearchResultCard key={l._id} leader={l} />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Stats + sync controls — hidden while actively searching */}
+      {!isSearching && (
+      <div>
       <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
         <StatCard
           label="Total Leaders"
@@ -269,6 +386,8 @@ export default function LeadersDashboardPage() {
           </div>
         )}
       </div>
+      </div>
+      )}
     </div>
   );
 }

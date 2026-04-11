@@ -317,6 +317,24 @@ export const getStatesStats = query({
   },
 });
 
+export const searchLeaders = query({
+  args: {
+    searchTerm: v.string(),
+    state: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    await requireAllowedUser(ctx);
+    if (!args.searchTerm.trim()) return [];
+    return ctx.db
+      .query("leaders")
+      .withSearchIndex("search_name", (q) => {
+        const base = q.search("fullName", args.searchTerm);
+        return args.state ? base.eq("state", args.state) : base;
+      })
+      .take(30);
+  },
+});
+
 // ---------------------------------------------------------------------------
 // Mutations
 // ---------------------------------------------------------------------------
@@ -417,5 +435,70 @@ export const bulkApproveHighConfidence = mutation({
     }
 
     return count;
+  },
+});
+
+// Editable fields for manual updates
+const MANUAL_FIELDS = [
+  "firstName", "lastName", "fullName", "title", "party", "district",
+  "email", "phone", "website", "birthday", "birthplace", "spouse",
+  "children", "bio", "photoUrl",
+] as const;
+
+export const updateLeader = mutation({
+  args: {
+    leaderId: v.id("leaders"),
+    updates: v.object({
+      firstName: v.optional(v.string()),
+      lastName: v.optional(v.string()),
+      fullName: v.optional(v.string()),
+      title: v.optional(v.string()),
+      party: v.optional(v.string()),
+      district: v.optional(v.string()),
+      email: v.optional(v.string()),
+      phone: v.optional(v.string()),
+      website: v.optional(v.string()),
+      birthday: v.optional(v.string()),
+      birthplace: v.optional(v.string()),
+      spouse: v.optional(v.string()),
+      children: v.optional(v.string()),
+      bio: v.optional(v.string()),
+      photoUrl: v.optional(v.string()),
+    }),
+  },
+  handler: async (ctx, args) => {
+    await requireAllowedUser(ctx);
+    const leader = await ctx.db.get(args.leaderId);
+    if (!leader) throw new Error("Leader not found");
+
+    const now = Date.now();
+    const patch: Partial<Doc<"leaders">> = { lastVerifiedAt: now };
+
+    for (const field of MANUAL_FIELDS) {
+      if (!(field in args.updates)) continue;
+      const newVal = args.updates[field] as string | undefined;
+      const oldVal = leader[field as keyof Doc<"leaders">] as string | undefined;
+      const oldStr = oldVal ?? "";
+      const newStr = newVal ?? "";
+
+      // Apply change regardless; create audit record only if value changed
+      patch[field as keyof typeof patch] = (newStr || undefined) as never;
+
+      if (oldStr !== newStr) {
+        await ctx.db.insert("leader_changes", {
+          leaderId: args.leaderId,
+          field,
+          oldValue: oldVal,
+          newValue: newStr,
+          source: "manual",
+          confidence: "high",
+          status: "approved",
+          reviewedAt: now,
+          detectedAt: now,
+        });
+      }
+    }
+
+    await ctx.db.patch(args.leaderId, patch);
   },
 });

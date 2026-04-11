@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -55,7 +55,6 @@ function PartyBadge({ party }: { party?: string }) {
       : lower.includes("democrat") || lower.includes("dem")
         ? "bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
         : "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300";
-
   return (
     <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${cls}`}>
       {party}
@@ -63,12 +62,14 @@ function PartyBadge({ party }: { party?: string }) {
   );
 }
 
-function LeaderCard({ leader }: { leader: Leader }) {
+function LeaderCard({ leader, stateCode }: { leader: Leader; stateCode: string }) {
   const [imgError, setImgError] = useState(false);
 
   return (
-    <div className="flex gap-3 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
-      {/* Photo */}
+    <Link
+      href={`/leaders/states/${stateCode}/${leader._id}`}
+      className="flex gap-3 rounded-xl border border-gray-200 bg-white p-4 transition-colors hover:border-gray-300 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:hover:border-gray-600 dark:hover:bg-gray-700"
+    >
       <div className="shrink-0">
         {leader.photoUrl && !imgError ? (
           <div className="relative h-14 w-12 overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-700">
@@ -84,18 +85,13 @@ function LeaderCard({ leader }: { leader: Leader }) {
           </div>
         ) : (
           <div className="flex h-14 w-12 items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-700">
-            <svg
-              className="h-6 w-6 text-gray-300 dark:text-gray-600"
-              fill="currentColor"
-              viewBox="0 0 24 24"
-            >
+            <svg className="h-6 w-6 text-gray-300 dark:text-gray-600" fill="currentColor" viewBox="0 0 24 24">
               <path d="M7.5 6a4.5 4.5 0 1 1 9 0 4.5 4.5 0 0 1-9 0ZM3.751 20.105a8.25 8.25 0 0 1 16.498 0 .75.75 0 0 1-.437.695A18.683 18.683 0 0 1 12 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 0 1-.437-.695Z" />
             </svg>
           </div>
         )}
       </div>
 
-      {/* Info */}
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-start gap-2">
           <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
@@ -103,34 +99,23 @@ function LeaderCard({ leader }: { leader: Leader }) {
           </p>
           <PartyBadge party={leader.party} />
         </div>
-
         <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
           {leader.title ?? CHAMBER_LABELS[leader.chamber] ?? leader.chamber}
           {leader.district ? ` · District ${leader.district}` : ""}
         </p>
-
-        <div className="mt-2 flex flex-wrap gap-2">
-          {leader.email && (
-            <a
-              href={`mailto:${leader.email}`}
-              className="text-xs text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
-            >
-              {leader.email}
-            </a>
-          )}
-          {leader.website && (
-            <a
-              href={leader.website}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-xs text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
-            >
-              Website
-            </a>
-          )}
-        </div>
+        {leader.email && (
+          <p className="mt-1.5 truncate text-xs text-gray-400 dark:text-gray-500">
+            {leader.email}
+          </p>
+        )}
       </div>
-    </div>
+
+      <div className="shrink-0 self-center">
+        <svg className="h-4 w-4 text-gray-300 dark:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+        </svg>
+      </div>
+    </Link>
   );
 }
 
@@ -144,13 +129,27 @@ export default function StateDetailPage() {
     isAuthenticated ? { state: stateCode } : "skip"
   );
 
-  const [branchFilter, setBranchFilter] = useState<"all" | "upper" | "lower" | "other">(
-    "all"
+  const [branchFilter, setBranchFilter] = useState<"all" | "upper" | "lower" | "other">("all");
+  const [searchInput, setSearchInput] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+
+  // Debounce search
+  useEffect(() => {
+    const t = setTimeout(() => setSearchTerm(searchInput), 250);
+    return () => clearTimeout(t);
+  }, [searchInput]);
+
+  const searchResults = useQuery(
+    api.leaders.searchLeaders,
+    isAuthenticated && searchTerm.trim()
+      ? { searchTerm: searchTerm.trim(), state: stateCode }
+      : "skip"
   );
 
   const stateName = STATE_NAMES[stateCode] ?? stateCode.toUpperCase();
+  const isSearching = searchTerm.trim().length > 0;
 
-  const filtered = leaders
+  const filteredByBranch = leaders
     ? leaders.filter((l) => {
         if (branchFilter === "all") return true;
         if (branchFilter === "upper") return l.chamber === "upper";
@@ -159,12 +158,15 @@ export default function StateDetailPage() {
       })
     : undefined;
 
+  const displayLeaders = isSearching
+    ? (searchResults ?? undefined)
+    : filteredByBranch;
+
   const chamberCounts = leaders
     ? {
         upper: leaders.filter((l) => l.chamber === "upper").length,
         lower: leaders.filter((l) => l.chamber === "lower").length,
-        other: leaders.filter((l) => l.chamber !== "upper" && l.chamber !== "lower")
-          .length,
+        other: leaders.filter((l) => l.chamber !== "upper" && l.chamber !== "lower").length,
       }
     : null;
 
@@ -190,86 +192,105 @@ export default function StateDetailPage() {
         </Link>
       </div>
 
-      <div className="mb-6">
+      <div className="mb-5">
         <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
           {stateName}
         </h2>
         <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-          {leaders !== undefined
-            ? `${leaders.length} legislators`
-            : "Loading…"}
+          {leaders !== undefined ? `${leaders.length} legislators` : "Loading…"}
         </p>
       </div>
 
-      {/* Branch filter */}
-      {chamberCounts && leaders && leaders.length > 0 && (
-        <div className="mb-4 flex flex-wrap gap-2">
-          <button
-            onClick={() => setBranchFilter("all")}
-            className={filterBtnCls(branchFilter === "all")}
-          >
-            All ({leaders.length})
-          </button>
-          {chamberCounts.upper > 0 && (
+      {/* Search + filters row */}
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center">
+        {/* Local search */}
+        <div className="relative flex-1">
+          <svg className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 dark:text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+          </svg>
+          <input
+            type="text"
+            placeholder={`Search ${stateName} legislators…`}
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            className="w-full rounded-lg border border-gray-200 bg-white py-2 pl-9 pr-3 text-sm text-gray-900 placeholder:text-gray-400 focus:border-gray-400 focus:outline-none dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 dark:placeholder:text-gray-500"
+          />
+          {searchInput && (
             <button
-              onClick={() => setBranchFilter("upper")}
-              className={filterBtnCls(branchFilter === "upper")}
+              onClick={() => setSearchInput("")}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
             >
-              Senate ({chamberCounts.upper})
-            </button>
-          )}
-          {chamberCounts.lower > 0 && (
-            <button
-              onClick={() => setBranchFilter("lower")}
-              className={filterBtnCls(branchFilter === "lower")}
-            >
-              House ({chamberCounts.lower})
-            </button>
-          )}
-          {chamberCounts.other > 0 && (
-            <button
-              onClick={() => setBranchFilter("other")}
-              className={filterBtnCls(branchFilter === "other")}
-            >
-              Other ({chamberCounts.other})
+              <svg className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" />
+              </svg>
             </button>
           )}
         </div>
-      )}
+
+        {/* Chamber filter — hidden while searching */}
+        {!isSearching && chamberCounts && leaders && leaders.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            <button onClick={() => setBranchFilter("all")} className={filterBtnCls(branchFilter === "all")}>
+              All ({leaders.length})
+            </button>
+            {chamberCounts.upper > 0 && (
+              <button onClick={() => setBranchFilter("upper")} className={filterBtnCls(branchFilter === "upper")}>
+                Senate ({chamberCounts.upper})
+              </button>
+            )}
+            {chamberCounts.lower > 0 && (
+              <button onClick={() => setBranchFilter("lower")} className={filterBtnCls(branchFilter === "lower")}>
+                House ({chamberCounts.lower})
+              </button>
+            )}
+            {chamberCounts.other > 0 && (
+              <button onClick={() => setBranchFilter("other")} className={filterBtnCls(branchFilter === "other")}>
+                Other ({chamberCounts.other})
+              </button>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* Loading */}
-      {leaders === undefined && (
+      {displayLeaders === undefined && (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {[1, 2, 3, 4, 5, 6].map((n) => (
-            <div
-              key={n}
-              className="h-24 animate-pulse rounded-xl bg-gray-100 dark:bg-gray-800"
-            />
+            <div key={n} className="h-24 animate-pulse rounded-xl bg-gray-100 dark:bg-gray-800" />
           ))}
         </div>
       )}
 
-      {/* Empty state */}
-      {filtered !== undefined && filtered.length === 0 && (
+      {/* Empty */}
+      {displayLeaders !== undefined && displayLeaders.length === 0 && (
         <div className="rounded-xl border border-dashed border-gray-300 bg-white px-6 py-16 text-center dark:border-gray-600 dark:bg-gray-800">
           <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-            No leaders found
+            {isSearching ? "No results" : "No leaders found"}
           </p>
           <p className="mt-1 text-sm text-gray-400 dark:text-gray-500">
-            {leaders?.length === 0
-              ? "This state hasn't been synced yet. Go to the Leaders dashboard to sync."
-              : "No leaders match the selected filter."}
+            {isSearching
+              ? `No legislators matching "${searchTerm}" in ${stateName}.`
+              : leaders?.length === 0
+                ? "This state hasn't been synced yet."
+                : "No leaders match the selected filter."}
           </p>
         </div>
       )}
 
-      {/* Leader cards */}
-      {filtered !== undefined && filtered.length > 0 && (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          {filtered.map((leader) => (
-            <LeaderCard key={leader._id} leader={leader as Leader} />
-          ))}
-        </div>
+      {/* Cards */}
+      {displayLeaders !== undefined && displayLeaders.length > 0 && (
+        <>
+          {isSearching && (
+            <p className="mb-3 text-xs text-gray-400 dark:text-gray-500">
+              {displayLeaders.length} result{displayLeaders.length !== 1 ? "s" : ""} for &ldquo;{searchTerm}&rdquo;
+            </p>
+          )}
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {displayLeaders.map((leader) => (
+              <LeaderCard key={leader._id} leader={leader as Leader} stateCode={stateCode} />
+            ))}
+          </div>
+        </>
       )}
     </div>
   );
