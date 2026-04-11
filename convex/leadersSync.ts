@@ -55,17 +55,25 @@ interface OpenStatesResponse {
 }
 
 // ---------------------------------------------------------------------------
-// Fetch one page with up to 3 retries on 5xx / rate-limit errors
+// Fetch one page with up to 4 retries.
+// 429 rate-limit: wait 60 s on first hit, 120 s on second, 240 s on third.
+// 5xx transient errors: standard exponential backoff (2 s, 4 s, 8 s).
 // ---------------------------------------------------------------------------
 async function fetchPage(
   url: string,
   apiKey: string,
-  retries = 3
+  retries = 4
 ): Promise<OpenStatesResponse> {
   let lastErr: unknown;
   for (let attempt = 0; attempt < retries; attempt++) {
     if (attempt > 0) {
-      await new Promise((r) => setTimeout(r, 1000 * Math.pow(2, attempt)));
+      // 429 gets a long cooldown; 5xx gets a short backoff
+      const isRateLimit = lastErr instanceof Error && lastErr.message.includes("429");
+      const delayMs = isRateLimit
+        ? 60_000 * attempt          // 60 s, 120 s, 180 s
+        : 2_000 * Math.pow(2, attempt - 1); // 2 s, 4 s, 8 s
+      console.log(`[fetchPage] waiting ${delayMs / 1000}s before retry ${attempt}…`);
+      await new Promise((r) => setTimeout(r, delayMs));
     }
     let res: Response;
     try {
@@ -191,7 +199,8 @@ export const syncNextState = internalAction({
     }
 
     if (rest.length > 0) {
-      await ctx.scheduler.runAfter(0, internal.leadersSync.syncNextState, {
+      // 30-second pause between states to stay well under Open States rate limits
+      await ctx.scheduler.runAfter(30_000, internal.leadersSync.syncNextState, {
         remainingStates: rest,
       });
     } else {
