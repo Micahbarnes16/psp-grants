@@ -45,11 +45,10 @@ async function fetchMembers(
   apiKey: string
 ): Promise<CongressMember[]> {
   const limit = chamber === "Senate" ? 10 : 60;
+  const chamberPath = chamber === "Senate" ? "senate" : "house";
   const url =
-    `https://api.congress.gov/v3/member` +
-    `?stateCode=${encodeURIComponent(stateCode)}` +
-    `&chamber=${chamber}` +
-    `&currentMember=true` +
+    `https://api.congress.gov/v3/member/${encodeURIComponent(stateCode)}/${chamberPath}` +
+    `?currentMember=true` +
     `&limit=${limit}` +
     `&format=json` +
     `&api_key=${apiKey}`;
