@@ -188,6 +188,10 @@ export default defineSchema({
     .searchIndex("search_name", {
       searchField: "fullName",
       filterFields: ["state"],
+    })
+    .searchIndex("search_by_name", {
+      searchField: "fullName",
+      filterFields: ["state", "branch", "chamber"],
     }),
 
   leader_changes: defineTable({

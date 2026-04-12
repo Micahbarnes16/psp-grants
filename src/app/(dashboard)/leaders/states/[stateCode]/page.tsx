@@ -55,6 +55,44 @@ type Leader = {
 };
 
 // ---------------------------------------------------------------------------
+// District sorting helpers
+// ---------------------------------------------------------------------------
+function parseDistrictNum(d: string): number | null {
+  const n = parseInt(d, 10);
+  return isNaN(n) ? null : n;
+}
+
+function sortByDistrict<T extends { district?: string; fullName: string }>(
+  leaders: T[]
+): T[] {
+  return [...leaders].sort((a, b) => {
+    if (!a.district && !b.district) return a.fullName.localeCompare(b.fullName);
+    if (!a.district) return 1;
+    if (!b.district) return -1;
+
+    const aNum = parseDistrictNum(a.district);
+    const bNum = parseDistrictNum(b.district);
+
+    if (aNum !== null && bNum !== null) return aNum - bNum;
+    if (aNum !== null) return -1;
+    if (bNum !== null) return 1;
+    return a.district.localeCompare(b.district);
+  });
+}
+
+type DistrictGroup = { district: string | null; members: Leader[] };
+
+function groupByDistrict(leaders: Leader[]): DistrictGroup[] {
+  const map = new Map<string | null, Leader[]>();
+  for (const leader of leaders) {
+    const key = leader.district ?? null;
+    if (!map.has(key)) map.set(key, []);
+    map.get(key)!.push(leader);
+  }
+  return [...map.entries()].map(([district, members]) => ({ district, members }));
+}
+
+// ---------------------------------------------------------------------------
 // Sub-components
 // ---------------------------------------------------------------------------
 function PartyBadge({ party }: { party?: string }) {
@@ -112,8 +150,12 @@ function LeaderCard({ leader, stateCode }: { leader: Leader; stateCode: string }
         </div>
         <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
           {subtitle}
-          {leader.district ? ` · District ${leader.district}` : ""}
         </p>
+        {leader.district && (
+          <p className="mt-0.5 text-[10px] font-medium text-gray-400 dark:text-gray-500">
+            District {leader.district}
+          </p>
+        )}
         {leader.email && (
           <p className="mt-1.5 truncate text-xs text-gray-400 dark:text-gray-500">
             {leader.email}
@@ -147,6 +189,7 @@ function PlaceholderCard({ office }: { office: string }) {
   );
 }
 
+// Simple grid (no sorting) — used for statewide and search results
 function LeaderGrid({ leaders, stateCode, emptyMessage }: {
   leaders: Leader[] | undefined;
   stateCode: string;
@@ -175,6 +218,76 @@ function LeaderGrid({ leaders, stateCode, emptyMessage }: {
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
       {leaders.map((leader) => (
         <LeaderCard key={leader._id} leader={leader} stateCode={stateCode} />
+      ))}
+    </div>
+  );
+}
+
+// District-sorted grid with optional grouping for multi-member districts
+function DistrictedLeaderGrid({ leaders, stateCode, emptyMessage }: {
+  leaders: Leader[] | undefined;
+  stateCode: string;
+  emptyMessage?: string;
+}) {
+  if (leaders === undefined) {
+    return (
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        {[1, 2, 3, 4].map((n) => (
+          <div key={n} className="h-24 animate-pulse rounded-xl bg-gray-100 dark:bg-gray-800" />
+        ))}
+      </div>
+    );
+  }
+  if (leaders.length === 0) {
+    return (
+      <div className="rounded-xl border border-dashed border-gray-300 bg-white px-6 py-12 text-center dark:border-gray-600 dark:bg-gray-800">
+        <p className="text-sm font-medium text-gray-700 dark:text-gray-300">No leaders found</p>
+        <p className="mt-1 text-sm text-gray-400 dark:text-gray-500">
+          {emptyMessage ?? "This chamber hasn't been synced yet."}
+        </p>
+      </div>
+    );
+  }
+
+  const sorted = sortByDistrict(leaders);
+
+  // Detect multi-member districts
+  const districtCounts = new Map<string, number>();
+  for (const l of sorted) {
+    if (l.district) {
+      districtCounts.set(l.district, (districtCounts.get(l.district) ?? 0) + 1);
+    }
+  }
+  const hasMultiMemberDistricts = [...districtCounts.values()].some((v) => v > 1);
+
+  if (!hasMultiMemberDistricts) {
+    return (
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        {sorted.map((leader) => (
+          <LeaderCard key={leader._id} leader={leader} stateCode={stateCode} />
+        ))}
+      </div>
+    );
+  }
+
+  // Group by district and render with headers
+  const groups = groupByDistrict(sorted);
+
+  return (
+    <div className="space-y-5">
+      {groups.map(({ district, members }) => (
+        <div key={district ?? "no-district"}>
+          {district && (
+            <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
+              District {district}
+            </h4>
+          )}
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {members.map((leader) => (
+              <LeaderCard key={leader._id} leader={leader} stateCode={stateCode} />
+            ))}
+          </div>
+        </div>
       ))}
     </div>
   );
@@ -226,7 +339,7 @@ export default function StateDetailPage() {
   const searchResults = useQuery(
     api.leaders.searchLeaders,
     isAuthenticated && searchTerm.trim()
-      ? { searchTerm: searchTerm.trim(), state: stateCode }
+      ? { query: searchTerm.trim(), stateCode }
       : "skip"
   );
 
@@ -440,7 +553,7 @@ export default function StateDetailPage() {
 
           {/* Tab: State Senate */}
           {activeTab === "senate" && (
-            <LeaderGrid
+            <DistrictedLeaderGrid
               leaders={senateLeaders as Leader[] | undefined}
               stateCode={stateCode}
               emptyMessage="The State Senate hasn't been synced yet. Use Sync Now above."
@@ -449,7 +562,7 @@ export default function StateDetailPage() {
 
           {/* Tab: State House */}
           {activeTab === "house" && (
-            <LeaderGrid
+            <DistrictedLeaderGrid
               leaders={houseLeaders as Leader[] | undefined}
               stateCode={stateCode}
               emptyMessage="The State House hasn't been synced yet. Use Sync Now above."
@@ -458,7 +571,7 @@ export default function StateDetailPage() {
 
           {/* Tab: Legislature (Nebraska unicameral) */}
           {activeTab === "legislature" && (
-            <LeaderGrid
+            <DistrictedLeaderGrid
               leaders={legislativeLeaders as Leader[] | undefined}
               stateCode={stateCode}
               emptyMessage="The Legislature hasn't been synced yet. Use Sync Now above."
@@ -577,7 +690,7 @@ export default function StateDetailPage() {
                         </span>
                       )}
                     </h3>
-                    <LeaderGrid
+                    <DistrictedLeaderGrid
                       leaders={usHouseReps as Leader[] | undefined}
                       stateCode={stateCode}
                       emptyMessage="No U.S. Representatives found."

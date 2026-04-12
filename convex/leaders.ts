@@ -400,19 +400,20 @@ export const getLeaderBranchStats = query({
 
 export const searchLeaders = query({
   args: {
-    searchTerm: v.string(),
-    state: v.optional(v.string()),
+    query: v.string(),
+    stateCode: v.optional(v.string()),
+    limit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     await requireAllowedUser(ctx);
-    if (!args.searchTerm.trim()) return [];
+    if (!args.query.trim()) return [];
     return ctx.db
       .query("leaders")
-      .withSearchIndex("search_name", (q) => {
-        const base = q.search("fullName", args.searchTerm);
-        return args.state ? base.eq("state", args.state) : base;
+      .withSearchIndex("search_by_name", (q) => {
+        const base = q.search("fullName", args.query);
+        return args.stateCode ? base.eq("state", args.stateCode) : base;
       })
-      .take(30);
+      .take(args.limit ?? 20);
   },
 });
 
