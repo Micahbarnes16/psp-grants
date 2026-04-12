@@ -7,7 +7,7 @@ import { internal } from "./_generated/api";
 import { requireAllowedUser } from "./lib/auth";
 
 // ---------------------------------------------------------------------------
-// All 50 state codes (uppercase, as the Civic API prefers)
+// All 50 state codes (uppercase, as Congress.gov expects)
 // ---------------------------------------------------------------------------
 const ALL_STATE_CODES = [
   "AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA",
@@ -18,84 +18,47 @@ const ALL_STATE_CODES = [
 ];
 
 // ---------------------------------------------------------------------------
-// State capital addresses — the Civic API requires a full address string,
-// not a bare two-letter state code.
+// Congress.gov API types
 // ---------------------------------------------------------------------------
-const STATE_CAPITALS: Record<string, string> = {
-  AL: "Montgomery, Alabama",
-  AK: "Juneau, Alaska",
-  AZ: "Phoenix, Arizona",
-  AR: "Little Rock, Arkansas",
-  CA: "Sacramento, California",
-  CO: "Denver, Colorado",
-  CT: "Hartford, Connecticut",
-  DE: "Dover, Delaware",
-  FL: "Tallahassee, Florida",
-  GA: "Atlanta, Georgia",
-  HI: "Honolulu, Hawaii",
-  ID: "Boise, Idaho",
-  IL: "Springfield, Illinois",
-  IN: "Indianapolis, Indiana",
-  IA: "Des Moines, Iowa",
-  KS: "Topeka, Kansas",
-  KY: "Frankfort, Kentucky",
-  LA: "Baton Rouge, Louisiana",
-  ME: "Augusta, Maine",
-  MD: "Annapolis, Maryland",
-  MA: "Boston, Massachusetts",
-  MI: "Lansing, Michigan",
-  MN: "Saint Paul, Minnesota",
-  MS: "Jackson, Mississippi",
-  MO: "Jefferson City, Missouri",
-  MT: "Helena, Montana",
-  NE: "Lincoln, Nebraska",
-  NV: "Carson City, Nevada",
-  NH: "Concord, New Hampshire",
-  NJ: "Trenton, New Jersey",
-  NM: "Santa Fe, New Mexico",
-  NY: "Albany, New York",
-  NC: "Raleigh, North Carolina",
-  ND: "Bismarck, North Dakota",
-  OH: "Columbus, Ohio",
-  OK: "Oklahoma City, Oklahoma",
-  OR: "Salem, Oregon",
-  PA: "Harrisburg, Pennsylvania",
-  RI: "Providence, Rhode Island",
-  SC: "Columbia, South Carolina",
-  SD: "Pierre, South Dakota",
-  TN: "Nashville, Tennessee",
-  TX: "Austin, Texas",
-  UT: "Salt Lake City, Utah",
-  VT: "Montpelier, Vermont",
-  VA: "Richmond, Virginia",
-  WA: "Olympia, Washington",
-  WV: "Charleston, West Virginia",
-  WI: "Madison, Wisconsin",
-  WY: "Cheyenne, Wyoming",
-};
-
-// ---------------------------------------------------------------------------
-// Google Civic Information API types
-// ---------------------------------------------------------------------------
-interface CivicOfficial {
+interface CongressMember {
+  bioguideId: string;
   name: string;
   party?: string;
-  phones?: string[];
-  urls?: string[];
-  photoUrl?: string;
-  emails?: string[];
+  state?: string;
+  district?: number;
+  depiction?: {
+    imageUrl?: string;
+  };
 }
 
-interface CivicOffice {
-  name: string;
-  roles: string[];
-  officialIndices: number[];
-}
-
-interface CivicResponse {
-  offices?: CivicOffice[];
-  officials?: CivicOfficial[];
+interface CongressResponse {
+  members?: CongressMember[];
   error?: { message: string };
+}
+
+// ---------------------------------------------------------------------------
+// Fetch members for one state + chamber from Congress.gov
+// ---------------------------------------------------------------------------
+async function fetchMembers(
+  stateCode: string,
+  chamber: "Senate" | "House",
+  apiKey: string
+): Promise<CongressMember[]> {
+  const limit = chamber === "Senate" ? 10 : 60;
+  const url =
+    `https://api.congress.gov/v3/member` +
+    `?stateCode=${encodeURIComponent(stateCode)}` +
+    `&chamber=${chamber}` +
+    `&currentMember=true` +
+    `&limit=${limit}` +
+    `&api_key=${apiKey}`;
+
+  const res = await fetch(url);
+  if (!res.ok) {
+    throw new Error(`Congress.gov API error (${chamber}): ${res.status} ${res.statusText}`);
+  }
+  const data: CongressResponse = await res.json();
+  return data.members ?? [];
 }
 
 // ---------------------------------------------------------------------------
@@ -107,70 +70,42 @@ async function syncStateImpl(
   apiKey: string
 ): Promise<{ synced: number; state: string }> {
   const state = stateCode.toUpperCase();
-  const address = STATE_CAPITALS[state];
-  if (!address) throw new Error(`Unknown state code: ${stateCode}`);
 
-  const url =
-    `https://www.googleapis.com/civicinfo/v2/representatives` +
-    `?address=${encodeURIComponent(address)}` +
-    `&levels=country` +
-    `&roles=legislatorUpperBody` +
-    `&roles=legislatorLowerBody` +
-    `&key=${apiKey}`;
+  const [senators, representatives] = await Promise.all([
+    fetchMembers(state, "Senate", apiKey),
+    fetchMembers(state, "House", apiKey),
+  ]);
 
-  const res = await fetch(url);
-  if (!res.ok) {
-    throw new Error(`Google Civic API error: ${res.status} ${res.statusText}`);
-  }
-
-  const data: CivicResponse = await res.json();
-
-  if (!data.offices || !data.officials) {
-    console.log(`[civicSync] ${state}: no offices/officials in response`);
-    return { synced: 0, state };
-  }
-
-  let synced = 0;
   const now = Date.now();
+  let synced = 0;
 
-  for (const office of data.offices) {
-    const isUpperBody = office.roles.includes("legislatorUpperBody");
-    const isLowerBody = office.roles.includes("legislatorLowerBody");
-    if (!isUpperBody && !isLowerBody) continue;
-
-    const chamber = isUpperBody ? "u.s._senate" : "u.s._house";
-    const officeName = isUpperBody ? "U.S. Senator" : "U.S. Representative";
-
-    for (const idx of office.officialIndices) {
-      const official = data.officials[idx];
-      if (!official) continue;
-
-      const nameParts = official.name.trim().split(/\s+/);
-      const firstName = nameParts[0] ?? "";
-      const lastName = nameParts.slice(1).join(" ");
-      // Stable synthetic ID: source + state + normalized name + chamber
-      const normalizedName = official.name
-        .toLowerCase()
-        .replace(/\s+/g, "_")
-        .replace(/[^a-z0-9_]/g, "");
-      const externalId = `civic_${state.toLowerCase()}_${normalizedName}_${chamber}`;
+  for (const [members, chamber, officeName] of [
+    [senators, "u.s._senate", "U.S. Senator"] as const,
+    [representatives, "u.s._house", "U.S. Representative"] as const,
+  ]) {
+    for (const member of members) {
+      const nameParts = member.name.trim().split(/,\s*|\s+/);
+      // Congress.gov returns names as "Last, First" or "First Last"
+      const fullName = member.name.includes(",")
+        ? `${nameParts.slice(1).join(" ")} ${nameParts[0]}`.trim()
+        : member.name.trim();
+      const firstName = fullName.split(" ")[0] ?? "";
+      const lastName = fullName.split(" ").slice(1).join(" ");
 
       await ctx.runMutation(internal.leaders.upsertFederalLeader, {
-        externalId,
+        externalId: member.bioguideId,
         firstName,
         lastName,
-        fullName: official.name,
+        fullName,
         state: state.toLowerCase(),
         chamber,
         office: officeName,
-        party: official.party,
-        photoUrl: official.photoUrl,
-        phone: official.phones?.[0],
-        website: official.urls?.[0],
-        email: official.emails?.[0],
+        party: member.party,
+        photoUrl: member.depiction?.imageUrl,
+        district: member.district !== undefined ? String(member.district) : undefined,
         branch: "federal_legislative",
         level: "federal",
-        source: "google_civic",
+        source: "congress_gov",
         inOffice: true,
         lastSyncedAt: now,
       });
@@ -179,12 +114,12 @@ async function syncStateImpl(
     }
   }
 
-  console.log(`[civicSync] ${state}: synced ${synced} federal legislators`);
+  console.log(`[civicSync] ${state}: synced ${synced} federal legislators from Congress.gov`);
   return { synced, state };
 }
 
 // ---------------------------------------------------------------------------
-// Public actions
+// Public actions — same signatures as before; no other files need to change
 // ---------------------------------------------------------------------------
 
 /** Sync U.S. Senators and Representatives for a single state. */
@@ -192,8 +127,8 @@ export const syncFederalLeaders = action({
   args: { stateCode: v.string() },
   handler: async (ctx, args) => {
     await requireAllowedUser(ctx);
-    const apiKey = process.env.GOOGLE_CIVIC_API_KEY;
-    if (!apiKey) throw new Error("GOOGLE_CIVIC_API_KEY not set");
+    const apiKey = process.env.CONGRESS_API_KEY;
+    if (!apiKey) throw new Error("CONGRESS_API_KEY not set");
     return syncStateImpl(ctx, args.stateCode, apiKey);
   },
 });
@@ -206,8 +141,8 @@ export const syncAllFederalLeaders = action({
   args: {},
   handler: async (ctx) => {
     await requireAllowedUser(ctx);
-    const apiKey = process.env.GOOGLE_CIVIC_API_KEY;
-    if (!apiKey) throw new Error("GOOGLE_CIVIC_API_KEY not set");
+    const apiKey = process.env.CONGRESS_API_KEY;
+    if (!apiKey) throw new Error("CONGRESS_API_KEY not set");
 
     let totalSynced = 0;
     const errors: string[] = [];

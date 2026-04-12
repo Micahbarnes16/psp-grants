@@ -38,6 +38,7 @@ export const upsertFederalLeader = internalMutation({
     chamber: v.string(),
     office: v.string(),
     party: v.optional(v.string()),
+    district: v.optional(v.string()),
     photoUrl: v.optional(v.string()),
     phone: v.optional(v.string()),
     website: v.optional(v.string()),
