@@ -57,26 +57,20 @@ type Leader = {
 // ---------------------------------------------------------------------------
 // District sorting helpers
 // ---------------------------------------------------------------------------
-function parseDistrictNum(d: string): number | null {
-  const n = parseInt(d, 10);
-  return isNaN(n) ? null : n;
+function districtNum(d: string | undefined): number {
+  const n = parseInt(d ?? "", 10);
+  return isNaN(n) ? Infinity : n;
 }
 
 function sortByDistrict<T extends { district?: string; fullName: string }>(
   leaders: T[]
 ): T[] {
   return [...leaders].sort((a, b) => {
-    if (!a.district && !b.district) return a.fullName.localeCompare(b.fullName);
-    if (!a.district) return 1;
-    if (!b.district) return -1;
-
-    const aNum = parseDistrictNum(a.district);
-    const bNum = parseDistrictNum(b.district);
-
-    if (aNum !== null && bNum !== null) return aNum - bNum;
-    if (aNum !== null) return -1;
-    if (bNum !== null) return 1;
-    return a.district.localeCompare(b.district);
+    const aNum = districtNum(a.district);
+    const bNum = districtNum(b.district);
+    if (aNum !== bNum) return aNum - bNum;
+    // Same numeric value (including both Infinity): sort alphabetically by name
+    return a.fullName.localeCompare(b.fullName);
   });
 }
 
