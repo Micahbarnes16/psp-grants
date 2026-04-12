@@ -31,10 +31,13 @@ interface OpenStatesPerson {
   email?: string;
   party: string;
   birth_date?: string;
+  // district may be returned as a string or integer by the API
+  district?: string | number | null;
   current_role?: {
     title: string;
     org_classification: string;
-    district?: string;
+    // district may be returned as a string or integer by the API
+    district?: string | number | null;
   };
   jurisdiction: {
     id: string;
@@ -121,6 +124,13 @@ function personToLeaderData(person: OpenStatesPerson, state: string) {
   const chamber = person.current_role?.org_classification ?? "unknown";
   const website = person.links?.[0]?.url;
 
+  // Open States may return district as a string, integer, or null.
+  // Prefer current_role.district; fall back to top-level district.
+  // Convert to string so Convex's v.optional(v.string()) validator accepts it.
+  const rawDistrict = person.current_role?.district ?? person.district ?? null;
+  const district =
+    rawDistrict != null && rawDistrict !== "" ? String(rawDistrict) : undefined;
+
   return {
     externalId: person.id,
     firstName: person.given_name || person.name.split(" ")[0] || "",
@@ -128,7 +138,7 @@ function personToLeaderData(person: OpenStatesPerson, state: string) {
     fullName: person.name,
     state: state.toLowerCase(),
     chamber,
-    district: person.current_role?.district ?? undefined,
+    district,
     party: person.party || undefined,
     title: person.current_role?.title ?? undefined,
     photoUrl: person.image ?? undefined,
