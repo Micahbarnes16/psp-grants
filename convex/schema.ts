@@ -162,6 +162,8 @@ export default defineSchema({
     district: v.optional(v.string()),
     party: v.optional(v.string()),
     title: v.optional(v.string()),
+    office: v.optional(v.string()),
+    source: v.optional(v.string()),
     photoUrl: v.optional(v.string()),
     email: v.optional(v.string()),
     phone: v.optional(v.string()),
@@ -180,6 +182,7 @@ export default defineSchema({
   })
     .index("by_state", ["state"])
     .index("by_external_id", ["externalId"])
+    .index("by_branch", ["branch"])
     .index("by_state_and_chamber", ["state", "chamber"])
     .index("by_state_and_branch", ["state", "branch"])
     .searchIndex("search_name", {

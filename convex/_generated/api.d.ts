@@ -9,6 +9,7 @@
  */
 
 import type * as ai from "../ai.js";
+import type * as civicSync from "../civicSync.js";
 import type * as crons from "../crons.js";
 import type * as funders from "../funders.js";
 import type * as grants from "../grants.js";
@@ -28,6 +29,7 @@ import type * as scrapers_ncf from "../scrapers/ncf.js";
 import type * as scrapers_parseUtils from "../scrapers/parseUtils.js";
 import type * as scrapers_stewardship from "../scrapers/stewardship.js";
 import type * as scrapers_zeffy from "../scrapers/zeffy.js";
+import type * as statewideOffices from "../statewideOffices.js";
 
 import type {
   ApiFromModules,
@@ -37,6 +39,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   ai: typeof ai;
+  civicSync: typeof civicSync;
   crons: typeof crons;
   funders: typeof funders;
   grants: typeof grants;
@@ -56,6 +59,7 @@ declare const fullApi: ApiFromModules<{
   "scrapers/parseUtils": typeof scrapers_parseUtils;
   "scrapers/stewardship": typeof scrapers_stewardship;
   "scrapers/zeffy": typeof scrapers_zeffy;
+  statewideOffices: typeof statewideOffices;
 }>;
 
 /**

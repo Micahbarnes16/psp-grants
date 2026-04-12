@@ -26,6 +26,44 @@ const TRACKED_FIELDS = [
 type TrackedField = (typeof TRACKED_FIELDS)[number];
 
 // ---------------------------------------------------------------------------
+// Internal: upsert a single federal leader (called from civicSync action)
+// ---------------------------------------------------------------------------
+export const upsertFederalLeader = internalMutation({
+  args: {
+    externalId: v.string(),
+    firstName: v.string(),
+    lastName: v.string(),
+    fullName: v.string(),
+    state: v.string(),
+    chamber: v.string(),
+    office: v.string(),
+    party: v.optional(v.string()),
+    photoUrl: v.optional(v.string()),
+    phone: v.optional(v.string()),
+    website: v.optional(v.string()),
+    email: v.optional(v.string()),
+    branch: v.string(),
+    level: v.string(),
+    source: v.string(),
+    inOffice: v.boolean(),
+    lastSyncedAt: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db
+      .query("leaders")
+      .withIndex("by_external_id", (q) => q.eq("externalId", args.externalId))
+      .unique();
+
+    if (!existing) {
+      await ctx.db.insert("leaders", args);
+      return "new";
+    }
+    await ctx.db.patch(existing._id, args);
+    return "updated";
+  },
+});
+
+// ---------------------------------------------------------------------------
 // Internal: batch upsert leaders (called from sync action)
 // ---------------------------------------------------------------------------
 export const batchUpsertLeaders = internalMutation({
@@ -314,6 +352,48 @@ export const getStatesStats = query({
     }
 
     return { leadersByState, changesByState };
+  },
+});
+
+export const listLegislativeLeadersByState = query({
+  args: { state: v.string() },
+  handler: async (ctx, args) => {
+    await requireAllowedUser(ctx);
+    return ctx.db
+      .query("leaders")
+      .withIndex("by_state_and_branch", (q) =>
+        q.eq("state", args.state).eq("branch", "legislative")
+      )
+      .take(500);
+  },
+});
+
+export const listFederalLeadersByState = query({
+  args: { state: v.string() },
+  handler: async (ctx, args) => {
+    await requireAllowedUser(ctx);
+    return ctx.db
+      .query("leaders")
+      .withIndex("by_state_and_branch", (q) =>
+        q.eq("state", args.state).eq("branch", "federal_legislative")
+      )
+      .take(100);
+  },
+});
+
+export const getLeaderBranchStats = query({
+  args: {},
+  handler: async (ctx) => {
+    await requireAllowedUser(ctx);
+    const leaders = await ctx.db.query("leaders").take(10000);
+    const stats = { legislative: 0, executive: 0, federal_legislative: 0, judicial: 0 };
+    for (const l of leaders) {
+      if (l.branch === "legislative") stats.legislative++;
+      else if (l.branch === "executive") stats.executive++;
+      else if (l.branch === "federal_legislative") stats.federal_legislative++;
+      else if (l.branch === "judicial") stats.judicial++;
+    }
+    return stats;
   },
 });
 

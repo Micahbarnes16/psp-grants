@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useQuery, useAction, useConvexAuth } from "convex/react";
 import { api } from "@convex/_generated/api";
+// civicSync is referenced via api.civicSync — generated at build time
 
 const ALL_STATES = [
   { code: "al", name: "Alabama" }, { code: "ak", name: "Alaska" },
@@ -119,13 +120,21 @@ export default function LeadersDashboardPage() {
     isAuthenticated ? {} : "skip"
   );
 
+  const branchStats = useQuery(
+    api.leaders.getLeaderBranchStats,
+    isAuthenticated ? {} : "skip"
+  );
+
   const syncState = useAction(api.leadersSync.syncState);
   const syncAllStates = useAction(api.leadersSync.syncAllStates);
   const resumeFrom = useAction(api.leadersSync.resumeFrom);
+  const syncAllFederal = useAction(api.civicSync.syncAllFederalLeaders);
 
   const [selectedState, setSelectedState] = useState("in");
   const [syncingState, setSyncingState] = useState(false);
   const [syncingAll, setSyncingAll] = useState(false);
+  const [syncingFederal, setSyncingFederal] = useState(false);
+  const [federalResult, setFederalResult] = useState<string | null>(null);
   const [resumeState, setResumeState] = useState("ma");
   const [resuming, setResuming] = useState(false);
   const [resumeResult, setResumeResult] = useState<string | null>(null);
@@ -187,6 +196,22 @@ export default function LeadersDashboardPage() {
       setAllResult(`Error: ${err instanceof Error ? err.message : "failed"}`);
     } finally {
       setSyncingAll(false);
+    }
+  }
+
+  async function handleSyncAllFederal() {
+    setSyncingFederal(true);
+    setFederalResult(null);
+    try {
+      const result = await syncAllFederal({});
+      setFederalResult(
+        `Synced ${result.totalSynced} federal legislators across ${result.statesProcessed} states`
+        + (result.errors.length > 0 ? ` (${result.errors.length} errors)` : "")
+      );
+    } catch (err) {
+      setFederalResult(`Error: ${err instanceof Error ? err.message : "failed"}`);
+    } finally {
+      setSyncingFederal(false);
     }
   }
 
@@ -290,6 +315,31 @@ export default function LeadersDashboardPage() {
         />
       </div>
 
+      {/* Branch breakdown */}
+      <div className="mb-6 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+        <p className="mb-3 text-xs font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500">
+          Leaders by Branch
+        </p>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          {[
+            { label: "State Legislative", key: "legislative" as const, color: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300" },
+            { label: "Statewide Executive", key: "executive" as const, color: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300" },
+            { label: "Federal", key: "federal_legislative" as const, color: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300" },
+            { label: "Judicial", key: "judicial" as const, color: "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400" },
+          ].map(({ label, key, color }) => (
+            <div key={key} className="rounded-lg p-3">
+              <p className="text-xs text-gray-400 dark:text-gray-500">{label}</p>
+              <p className="mt-1 text-lg font-semibold text-gray-900 dark:text-gray-100">
+                {branchStats ? branchStats[key] : "—"}
+              </p>
+              <span className={`mt-1 inline-block rounded-full px-1.5 py-0.5 text-[10px] font-medium ${color}`}>
+                {key.replace("_", " ")}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+
       {/* Sync controls */}
       <div className="space-y-4">
         {/* Sync single state */}
@@ -360,6 +410,36 @@ export default function LeadersDashboardPage() {
               }`}
             >
               {allResult}
+            </p>
+          )}
+        </div>
+
+        {/* Sync All Federal Leaders */}
+        <div className="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+            Sync All Federal Leaders
+          </h3>
+          <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">
+            Syncs U.S. Senators and U.S. Representatives for all 50 states via Google Civic API.
+          </p>
+          <div className="mt-4">
+            <button
+              onClick={handleSyncAllFederal}
+              disabled={syncingFederal || syncingAll || syncingState}
+              className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+            >
+              {syncingFederal ? "Syncing…" : "Sync All Federal Leaders"}
+            </button>
+          </div>
+          {federalResult && (
+            <p
+              className={`mt-3 text-sm font-medium ${
+                federalResult.startsWith("Error")
+                  ? "text-red-600 dark:text-red-400"
+                  : "text-green-700 dark:text-green-400"
+              }`}
+            >
+              {federalResult}
             </p>
           )}
         </div>
