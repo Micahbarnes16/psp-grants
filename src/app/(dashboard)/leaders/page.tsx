@@ -365,12 +365,17 @@ export default function LeadersDashboardPage() {
         </div>
 
         {/* Resume from state */}
-        <div className="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
-          <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-            Resume Chain From State
-          </h3>
-          <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">
-            If the chain stopped mid-way, resume from a specific state without re-syncing already-complete states.
+        <div className="rounded-xl border border-amber-200 bg-white p-5 dark:border-amber-800/50 dark:bg-gray-800">
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+              Resume from State…
+            </h3>
+            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700 dark:bg-amber-900/40 dark:text-amber-400">
+              Advanced
+            </span>
+          </div>
+          <p className="mt-1 text-sm text-amber-700 dark:text-amber-400">
+            Only use if a sync stopped partway through. Pick the state where it left off to resume without re-syncing already-complete states.
           </p>
           <div className="mt-4 flex flex-wrap items-center gap-3">
             <select

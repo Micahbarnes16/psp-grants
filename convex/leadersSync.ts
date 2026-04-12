@@ -226,22 +226,51 @@ export const syncState = action({
 
 
 /**
- * Kick off a chained sync of all 50 states, one at a time.
+ * Kick off a chained sync of all 50 states (or a slice), one at a time.
  * Each state schedules the next when it finishes — no overlap, no contention.
  * Returns immediately; the chain runs entirely in the background.
+ * startIndex/endIndex are inclusive indices into ALL_STATES (defaults: 0 / last).
  */
 export const syncAllStates = action({
-  args: {},
-  handler: async (ctx) => {
+  args: {
+    startIndex: v.optional(v.number()),
+    endIndex: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
     await requireAllowedUser(ctx);
     if (!process.env.OPENSTATES_API_KEY) throw new Error("OPENSTATES_API_KEY not set");
 
+    const start = args.startIndex ?? 0;
+    const end = args.endIndex ?? ALL_STATES.length - 1;
+    const states = ALL_STATES.slice(start, end + 1);
+
     await ctx.scheduler.runAfter(0, internal.leadersSync.syncNextState, {
-      remainingStates: ALL_STATES,
+      remainingStates: states,
     });
 
-    console.log(`[syncAllStates] chain started — ${ALL_STATES.length} states will run sequentially`);
-    return { scheduled: ALL_STATES.length };
+    console.log(`[syncAllStates] chain started — ${states.length} states (indices ${start}–${end}) will run sequentially`);
+    return { scheduled: states.length };
+  },
+});
+
+/**
+ * Internal action for cron jobs — syncs a slice of ALL_STATES.
+ * startIndex and endIndex are inclusive indices into ALL_STATES.
+ */
+export const internalSyncRange = internalAction({
+  args: {
+    startIndex: v.number(),
+    endIndex: v.number(),
+  },
+  handler: async (ctx, args) => {
+    if (!process.env.OPENSTATES_API_KEY) throw new Error("OPENSTATES_API_KEY not set");
+
+    const states = ALL_STATES.slice(args.startIndex, args.endIndex + 1);
+    await ctx.scheduler.runAfter(0, internal.leadersSync.syncNextState, {
+      remainingStates: states,
+    });
+
+    console.log(`[internalSyncRange] chain started — ${states.length} states (indices ${args.startIndex}–${args.endIndex})`);
   },
 });
 

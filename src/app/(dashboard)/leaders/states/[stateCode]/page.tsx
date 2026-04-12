@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { useQuery, useConvexAuth } from "convex/react";
+import { useQuery, useAction, useConvexAuth } from "convex/react";
 import { api } from "@convex/_generated/api";
 
 const STATE_NAMES: Record<string, string> = {
@@ -129,6 +129,23 @@ export default function StateDetailPage() {
     isAuthenticated ? { state: stateCode } : "skip"
   );
 
+  const syncState = useAction(api.leadersSync.syncState);
+  const [syncing, setSyncing] = useState(false);
+  const [syncResult, setSyncResult] = useState<string | null>(null);
+
+  async function handleSyncNow() {
+    setSyncing(true);
+    setSyncResult(null);
+    try {
+      const result = await syncState({ state: stateCode });
+      setSyncResult(`Sync complete — ${result.total} leaders updated`);
+    } catch (err) {
+      setSyncResult(`Error: ${err instanceof Error ? err.message : "failed"}`);
+    } finally {
+      setSyncing(false);
+    }
+  }
+
   const [branchFilter, setBranchFilter] = useState<"all" | "upper" | "lower" | "other">("all");
   const [searchInput, setSearchInput] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
@@ -193,12 +210,45 @@ export default function StateDetailPage() {
       </div>
 
       <div className="mb-5">
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
-          {stateName}
-        </h2>
+        <div className="flex flex-wrap items-center gap-3">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+            {stateName}
+          </h2>
+          <button
+            onClick={handleSyncNow}
+            disabled={syncing}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-amber-300 bg-amber-50 px-3 py-1.5 text-sm font-medium text-amber-800 hover:bg-amber-100 disabled:opacity-60 dark:border-amber-700 dark:bg-amber-900/20 dark:text-amber-300 dark:hover:bg-amber-900/40"
+          >
+            {syncing ? (
+              <>
+                <svg className="h-3.5 w-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                </svg>
+                Syncing…
+              </>
+            ) : (
+              <>
+                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
+                </svg>
+                Sync Now
+              </>
+            )}
+          </button>
+        </div>
         <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
           {leaders !== undefined ? `${leaders.length} legislators` : "Loading…"}
         </p>
+        {syncResult && (
+          <p className={`mt-1.5 text-sm font-medium ${
+            syncResult.startsWith("Error")
+              ? "text-red-600 dark:text-red-400"
+              : "text-green-700 dark:text-green-400"
+          }`}>
+            {syncResult}
+          </p>
+        )}
       </div>
 
       {/* Search + filters row */}
