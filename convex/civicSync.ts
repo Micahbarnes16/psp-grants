@@ -18,6 +18,63 @@ const ALL_STATE_CODES = [
 ];
 
 // ---------------------------------------------------------------------------
+// State capital addresses — the Civic API requires a full address string,
+// not a bare two-letter state code.
+// ---------------------------------------------------------------------------
+const STATE_CAPITALS: Record<string, string> = {
+  AL: "Montgomery, Alabama",
+  AK: "Juneau, Alaska",
+  AZ: "Phoenix, Arizona",
+  AR: "Little Rock, Arkansas",
+  CA: "Sacramento, California",
+  CO: "Denver, Colorado",
+  CT: "Hartford, Connecticut",
+  DE: "Dover, Delaware",
+  FL: "Tallahassee, Florida",
+  GA: "Atlanta, Georgia",
+  HI: "Honolulu, Hawaii",
+  ID: "Boise, Idaho",
+  IL: "Springfield, Illinois",
+  IN: "Indianapolis, Indiana",
+  IA: "Des Moines, Iowa",
+  KS: "Topeka, Kansas",
+  KY: "Frankfort, Kentucky",
+  LA: "Baton Rouge, Louisiana",
+  ME: "Augusta, Maine",
+  MD: "Annapolis, Maryland",
+  MA: "Boston, Massachusetts",
+  MI: "Lansing, Michigan",
+  MN: "Saint Paul, Minnesota",
+  MS: "Jackson, Mississippi",
+  MO: "Jefferson City, Missouri",
+  MT: "Helena, Montana",
+  NE: "Lincoln, Nebraska",
+  NV: "Carson City, Nevada",
+  NH: "Concord, New Hampshire",
+  NJ: "Trenton, New Jersey",
+  NM: "Santa Fe, New Mexico",
+  NY: "Albany, New York",
+  NC: "Raleigh, North Carolina",
+  ND: "Bismarck, North Dakota",
+  OH: "Columbus, Ohio",
+  OK: "Oklahoma City, Oklahoma",
+  OR: "Salem, Oregon",
+  PA: "Harrisburg, Pennsylvania",
+  RI: "Providence, Rhode Island",
+  SC: "Columbia, South Carolina",
+  SD: "Pierre, South Dakota",
+  TN: "Nashville, Tennessee",
+  TX: "Austin, Texas",
+  UT: "Salt Lake City, Utah",
+  VT: "Montpelier, Vermont",
+  VA: "Richmond, Virginia",
+  WA: "Olympia, Washington",
+  WV: "Charleston, West Virginia",
+  WI: "Madison, Wisconsin",
+  WY: "Cheyenne, Wyoming",
+};
+
+// ---------------------------------------------------------------------------
 // Google Civic Information API types
 // ---------------------------------------------------------------------------
 interface CivicOfficial {
@@ -50,9 +107,12 @@ async function syncStateImpl(
   apiKey: string
 ): Promise<{ synced: number; state: string }> {
   const state = stateCode.toUpperCase();
+  const address = STATE_CAPITALS[state];
+  if (!address) throw new Error(`Unknown state code: ${stateCode}`);
+
   const url =
     `https://www.googleapis.com/civicinfo/v2/representatives` +
-    `?address=${encodeURIComponent(state)}` +
+    `?address=${encodeURIComponent(address)}` +
     `&levels=country` +
     `&roles=legislatorUpperBody` +
     `&roles=legislatorLowerBody` +

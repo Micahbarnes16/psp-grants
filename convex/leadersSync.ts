@@ -297,3 +297,47 @@ export const resumeFrom = action({
     return { scheduled: remaining.length, startingFrom: args.fromState };
   },
 });
+
+/**
+ * Full sync for a single state: Open States legislative data + Google Civic federal data.
+ * Runs both in parallel and returns a combined result.
+ */
+export const syncStateFull = action({
+  args: { stateCode: v.string() },
+  handler: async (ctx, args): Promise<{ legislative: number; federal: number; errors: string[] }> => {
+    await requireAllowedUser(ctx);
+
+    const errors: string[] = [];
+
+    type LegislativeResult = { total: number; new: number; updated: number; unchanged: number };
+    type FederalResult = { synced: number; state: string };
+
+    const [legislativeResult, federalResult]: [
+      PromiseSettledResult<LegislativeResult>,
+      PromiseSettledResult<FederalResult>,
+    ] = await Promise.allSettled([
+      ctx.runAction(api.leadersSync.syncState, { state: args.stateCode }) as Promise<LegislativeResult>,
+      ctx.runAction(api.civicSync.syncFederalLeaders, { stateCode: args.stateCode }) as Promise<FederalResult>,
+    ]);
+
+    const legislative: number =
+      legislativeResult.status === "fulfilled"
+        ? legislativeResult.value.total
+        : (() => {
+            const msg = legislativeResult.reason instanceof Error ? legislativeResult.reason.message : String(legislativeResult.reason);
+            errors.push(`Legislative: ${msg}`);
+            return 0;
+          })();
+
+    const federal: number =
+      federalResult.status === "fulfilled"
+        ? federalResult.value.synced
+        : (() => {
+            const msg = federalResult.reason instanceof Error ? federalResult.reason.message : String(federalResult.reason);
+            errors.push(`Federal: ${msg}`);
+            return 0;
+          })();
+
+    return { legislative, federal, errors };
+  },
+});

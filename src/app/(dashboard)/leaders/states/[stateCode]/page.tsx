@@ -192,8 +192,8 @@ export default function StateDetailPage() {
   const defaultTab: TabId = isNebraska ? "legislature" : "senate";
   const [activeTab, setActiveTab] = useState<TabId>(defaultTab);
 
-  // Sync Now (state legislative)
-  const syncState = useAction(api.leadersSync.syncState);
+  // Sync Now — legislative + federal in one shot
+  const syncStateFull = useAction(api.leadersSync.syncStateFull);
   const [syncing, setSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<string | null>(null);
 
@@ -260,8 +260,15 @@ export default function StateDetailPage() {
     setSyncing(true);
     setSyncResult(null);
     try {
-      const result = await syncState({ state: stateCode });
-      setSyncResult(`Sync complete — ${result.total} leaders updated`);
+      const result = await syncStateFull({ stateCode });
+      const parts: string[] = [];
+      if (result.legislative > 0) parts.push(`${result.legislative} legislative`);
+      if (result.federal > 0) parts.push(`${result.federal} federal`);
+      const summary = parts.length > 0 ? parts.join(", ") + " leaders updated" : "no changes";
+      setSyncResult(
+        `Sync complete — ${summary}`
+        + (result.errors.length > 0 ? ` (${result.errors.length} error${result.errors.length > 1 ? "s" : ""})` : "")
+      );
     } catch (err) {
       setSyncResult(`Error: ${err instanceof Error ? err.message : "failed"}`);
     } finally {
