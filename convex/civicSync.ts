@@ -104,6 +104,23 @@ async function fetchAllCurrentMembers(apiKey: string): Promise<CongressMember[]>
 
   memberCache = all;
   console.log(`[civicSync] fetched ${all.length} current members from Congress.gov`);
+
+  // Per-state breakdown using last-term chamber — helps verify total adds up
+  const byState: Record<string, { senators: number; reps: number }> = {};
+  for (const m of all) {
+    if (!m.state) continue;
+    const items = m.terms?.item;
+    const lastChamber = items && items.length > 0 ? items[items.length - 1].chamber : null;
+    if (!byState[m.state]) byState[m.state] = { senators: 0, reps: 0 };
+    if (lastChamber === "Senate") byState[m.state].senators++;
+    else if (lastChamber === "House of Representatives") byState[m.state].reps++;
+  }
+  const lines = Object.entries(byState)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([s, c]) => `${s}: ${c.senators}S ${c.reps}H`)
+    .join(", ");
+  console.log(`[civicSync] per-state breakdown: ${lines}`);
+
   return all;
 }
 
@@ -123,12 +140,17 @@ async function syncStateImpl(
 
   const stateMembers = allMembers.filter((m) => m.state === stateName);
 
-  const senators = stateMembers.filter((m) =>
-    m.terms?.item?.some((t) => t.chamber === "Senate" && !t.endYear)
-  );
-  const reps = stateMembers.filter((m) =>
-    m.terms?.item?.some((t) => t.chamber === "House of Representatives" && !t.endYear)
-  );
+  // Use the last entry in terms.item to determine current chamber — more
+  // reliable than requiring !endYear since some current members have endYear
+  // set to the current or future year rather than leaving it absent.
+  const senators = stateMembers.filter((m) => {
+    const items = m.terms?.item;
+    return items && items.length > 0 && items[items.length - 1].chamber === "Senate";
+  });
+  const reps = stateMembers.filter((m) => {
+    const items = m.terms?.item;
+    return items && items.length > 0 && items[items.length - 1].chamber === "House of Representatives";
+  });
 
   const now = Date.now();
   let synced = 0;
