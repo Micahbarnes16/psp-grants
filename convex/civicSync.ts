@@ -50,13 +50,20 @@ async function fetchMembers(
     `?stateCode=${encodeURIComponent(stateCode)}` +
     `&chamber=${chamber}` +
     `&currentMember=true` +
-    `&limit=${limit}` +
-    `&api_key=${apiKey}`;
+    `&limit=${limit}`;
 
-  const res = await fetch(url);
+  const res = await fetch(url, {
+    headers: {
+      "X-Api-Key": apiKey,
+      "Accept": "application/json",
+    },
+  });
+
   if (!res.ok) {
-    throw new Error(`Congress.gov API error (${chamber}): ${res.status} ${res.statusText}`);
+    const text = await res.text();
+    throw new Error(`Congress.gov API error ${res.status} (${chamber}): ${text.slice(0, 200)}`);
   }
+
   const data: CongressResponse = await res.json();
   return data.members ?? [];
 }
