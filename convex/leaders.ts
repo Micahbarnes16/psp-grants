@@ -137,7 +137,13 @@ export const batchUpsertLeaders = internalMutation({
         }
       }
 
-      await ctx.db.patch(existing._id, { ...leaderData });
+      // Omit district from the patch when undefined so an API null response
+      // doesn't silently clear a district that is already stored in the DB.
+      const { district: newDistrict, ...restPatch } = leaderData;
+      const patch = newDistrict !== undefined
+        ? { ...restPatch, district: newDistrict }
+        : restPatch;
+      await ctx.db.patch(existing._id, patch);
 
       if (changedFields.length > 0) {
         updatedCount++;

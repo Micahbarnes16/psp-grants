@@ -65,31 +65,13 @@ function districtNum(d: string | undefined): number {
 function sortByDistrict<T extends { district?: string; fullName: string }>(
   leaders: T[]
 ): T[] {
-  // DIAGNOSTIC — remove after confirming root cause
-  const sample = leaders.slice(0, 5);
-  console.log(
-    "[sortByDistrict] before sort — sample districts:",
-    sample.map((l) => ({
-      name: l.fullName,
-      district: l.district,
-      districtType: typeof (l as Record<string, unknown>).district,
-    }))
-  );
-
-  const result = [...leaders].sort((a, b) => {
+  return [...leaders].sort((a, b) => {
     const aNum = districtNum(a.district);
     const bNum = districtNum(b.district);
     if (aNum !== bNum) return aNum - bNum;
     // Same numeric value (including both Infinity): sort alphabetically by name
     return a.fullName.localeCompare(b.fullName);
   });
-
-  console.log(
-    "[sortByDistrict] after sort — first 5:",
-    result.slice(0, 5).map((l) => ({ name: l.fullName, district: l.district }))
-  );
-
-  return result;
 }
 
 type DistrictGroup = { district: string | null; members: Leader[] };
@@ -260,14 +242,6 @@ function DistrictedLeaderGrid({ leaders, stateCode, emptyMessage }: {
       </div>
     );
   }
-
-  // DIAGNOSTIC — remove after confirming root cause
-  const withDistrict = leaders.filter((l) => l.district != null && l.district !== "");
-  console.log(
-    `[DistrictedLeaderGrid] ${leaders.length} leaders total, ` +
-    `${withDistrict.length} with district set. ` +
-    `Sample: ${JSON.stringify(leaders.slice(0, 3).map((l) => ({ name: l.fullName, district: l.district })))}`
-  );
 
   const sorted = sortByDistrict(leaders);
 
